@@ -13,17 +13,22 @@ const int SPEED_STEP = 50; // 速度调整步长（每次加减50毫秒）
 int g_updateInterval = 100; // 游戏更新间隔（默认100毫秒，可动态调整）
 
 // 全局变量定义
-bool g_grid[GRID_HEIGHT][GRID_WIDTH] = {false}; // 当前细胞状态（false=死亡，true=存活）
-bool g_nextGrid[GRID_HEIGHT][GRID_WIDTH] = {false}; // 下一代细胞状态
+bool g_grid[GRID_HEIGHT][GRID_WIDTH] = { false }; // 当前细胞状态（false=死亡，true=存活）
+bool g_nextGrid[GRID_HEIGHT][GRID_WIDTH] = { false }; // 下一代细胞状态
 bool g_isRunning = false; // 游戏运行状态（false=暂停，true=运行）
 UINT_PTR g_timerId = 0; // 定时器ID
 bool g_showResetTip = false; // 重置提示显示标记
 ULONGLONG g_resetTipTime = 0; // 重置提示显示时间
 
+// 全局 GDI 对象
+HBRUSH g_hBlackBrush = NULL;
+HBRUSH g_hWhiteBrush = NULL;
+HPEN g_hGrayPen = NULL;
+
 // 函数声明
 LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 void InitGrid(); // 初始化随机细胞网格
-void DrawGrid(HDC hdc); // 绘制细胞网格（含重置提示）
+void DrawGrid(HDC hdc, const RECT* pDirty); // 绘制细胞网格（含重置提示）
 int CountNeighbors(int x, int y); // 计算细胞周围存活邻居数
 void UpdateGrid(); // 计算下一代细胞状态
 void ResetGrid(); // 重置网格（全细胞死亡）
@@ -39,12 +44,17 @@ int WINAPI WinMain(
 )
 {
 	// 注册窗口类
-	WNDCLASS wc = {0};
+	WNDCLASS wc = { 0 };
 	wc.lpfnWndProc = WndProc;
 	wc.hInstance = hInstance;
 	wc.lpszClassName = TEXT("LifeGameWindow");
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-	wc.hbrBackground = (HBRUSH)WHITE_BRUSH;
+	wc.hbrBackground = NULL;
+
+	// 初始化 GDI 对象（只创建一次，程序退出时销毁）
+	g_hBlackBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
+	g_hWhiteBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
+	g_hGrayPen = CreatePen(PS_SOLID, 0, RGB(200, 200, 200));
 
 	if (!RegisterClass(&wc))
 	{
@@ -53,7 +63,7 @@ int WINAPI WinMain(
 	}
 
 	// 计算窗口实际大小（适配边框和标题栏）
-	RECT windowRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT};
+	RECT windowRect = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX, FALSE);
 
 	// 创建窗口
@@ -87,6 +97,9 @@ int WINAPI WinMain(
 		DispatchMessage(&msg);
 	}
 
+	// 程序退出时销毁 GDI 对象
+	DeleteObject(g_hGrayPen);
+
 	return (int)msg.wParam;
 }
 
@@ -97,35 +110,64 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	{
 	// 绘图消息
 	case WM_PAINT:
-		{
-			PAINTSTRUCT ps;
-			HDC hdc = BeginPaint(hWnd, &ps);
-			DrawGrid(hdc);
-			EndPaint(hWnd, &ps);
-			break;
-		}
+	{
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hWnd, &ps);
+
+		// 双缓冲
+		HDC memDC = CreateCompatibleDC(hdc);
+		HBITMAP hbm = CreateCompatibleBitmap(hdc, WINDOW_WIDTH, WINDOW_HEIGHT);
+		HBITMAP hOldBmp = (HBITMAP)SelectObject(memDC, hbm);
+
+		// 用白色填充背景
+		HBRUSH hWhite = g_hWhiteBrush;
+		RECT rc = { 0, 0, WINDOW_WIDTH, WINDOW_HEIGHT };
+		FillRect(memDC, &rc, hWhite);
+
+		//只重绘脏矩形区域
+		DrawGrid(memDC, &ps.rcPaint);
+
+		//只将脏区域 blit 到窗口
+		BitBlt(hdc,
+			ps.rcPaint.left, ps.rcPaint.top,
+			ps.rcPaint.right - ps.rcPaint.left,
+			ps.rcPaint.bottom - ps.rcPaint.top,
+			memDC,
+			ps.rcPaint.left, ps.rcPaint.top,
+			SRCCOPY);
+
+		SelectObject(memDC, hOldBmp);
+		DeleteObject(hbm);
+		DeleteDC(memDC);
+		EndPaint(hWnd, &ps);
+		break;
+	}
+
+	// 防止默认擦除背景，配合双缓冲可以减少闪烁
+	case WM_ERASEBKGND:
+		return 1;
 
 	// 定时器消息（控制游戏刷新）
 	case WM_TIMER:
 		if (g_isRunning)
 		{
 			UpdateGrid();
-			InvalidateRect(hWnd, NULL, TRUE);
+			InvalidateRect(hWnd, NULL, FALSE); // 不擦除背景，已由双缓冲处理
 		}
 		break;
 
 	// 鼠标左键点击（切换细胞状态）
 	case WM_LBUTTONDOWN:
+	{
+		int x = LOWORD(lParam) / CELL_SIZE;
+		int y = HIWORD(lParam) / CELL_SIZE;
+		if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT)
 		{
-			int x = LOWORD(lParam) / CELL_SIZE;
-			int y = HIWORD(lParam) / CELL_SIZE;
-			if (x >= 0 && x < GRID_WIDTH && y >= 0 && y < GRID_HEIGHT)
-			{
-				g_grid[y][x] = !g_grid[y][x];
-				InvalidateRect(hWnd, NULL, TRUE);
-			}
-			break;
+			g_grid[y][x] = !g_grid[y][x];
+			InvalidateRect(hWnd, NULL, FALSE);
 		}
+		break;
+	}
 
 	// 键盘按键消息
 	case WM_KEYDOWN:
@@ -147,17 +189,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			g_isRunning = false;
 			KillTimer(hWnd, g_timerId);
 			ResetGrid();
-			InvalidateRect(hWnd, NULL, TRUE);
+			InvalidateRect(hWnd, NULL, FALSE);
 			UpdateWindowTitle(hWnd); // 更新标题栏（暂停状态）
 			break;
 		case 'G': // 生成随机初始状态
 			g_isRunning = false;
 			KillTimer(hWnd, g_timerId);
 			InitGrid();
-			InvalidateRect(hWnd, NULL, TRUE);
+			InvalidateRect(hWnd, NULL, FALSE);
 			UpdateWindowTitle(hWnd); // 更新标题栏（暂停状态）
 			break;
-		case VK_ADD: // + 键（小键盘+）：加速
+		case VK_ADD: // + 键（小键盘）：加速
 		case 0xBB: // + 键（主键盘）：加速
 			if (g_updateInterval > MIN_INTERVAL)
 			{
@@ -225,28 +267,26 @@ void InitGrid()
 }
 
 // 绘制细胞网格（含重置提示，移除原窗口内速度提示）
-void DrawGrid(HDC hdc)
+void DrawGrid(HDC hdc, const RECT* pDirty)
 {
 	SetBkMode(hdc, TRANSPARENT);
+	SelectObject(hdc, g_hGrayPen);
 
-	// 创建绘图工具
-	HBRUSH hBlackBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
-	HBRUSH hWhiteBrush = (HBRUSH)GetStockObject(WHITE_BRUSH);
-	HPEN hGrayPen = CreatePen(PS_SOLID, 0, RGB(200, 200, 200));
-	SelectObject(hdc, hGrayPen);
+	//计算需要重绘的细胞范围
+	int xStart = pDirty ? pDirty->left / CELL_SIZE : 0;
+	int xEnd = pDirty ? (pDirty->right + CELL_SIZE - 1) / CELL_SIZE : GRID_WIDTH;
+	int yStart = pDirty ? pDirty->top / CELL_SIZE : 0;
+	int yEnd = pDirty ? (pDirty->bottom + CELL_SIZE - 1) / CELL_SIZE : GRID_HEIGHT;
 
-	// 绘制所有细胞
-	for (int y = 0; y < GRID_HEIGHT; y++)
+	for (int y = yStart; y < yEnd && y < GRID_HEIGHT; y++)
 	{
-		for (int x = 0; x < GRID_WIDTH; x++)
+		for (int x = xStart; x < xEnd && x < GRID_WIDTH; x++)
 		{
 			int left = x * CELL_SIZE;
 			int top = y * CELL_SIZE;
 			int right = left + CELL_SIZE;
 			int bottom = top + CELL_SIZE;
-
-			// 根据细胞状态选择笔刷
-			SelectObject(hdc, g_grid[y][x] ? hBlackBrush : hWhiteBrush);
+			SelectObject(hdc, g_grid[y][x] ? g_hBlackBrush : g_hWhiteBrush);
 			Rectangle(hdc, left, top, right, bottom);
 		}
 	}
@@ -262,13 +302,10 @@ void DrawGrid(HDC hdc)
 		{
 			SetTextColor(hdc, RGB(255, 0, 0));
 			TextOut(hdc, WINDOW_WIDTH / 2 - 80, WINDOW_HEIGHT / 2,
-			        TEXT("网格已重置！按 G 生成随机细胞"),
-			        lstrlen(TEXT("网格已重置！按 G 生成随机细胞")));
+				TEXT("网格已重置！按 G 生成随机细胞"),
+				lstrlen(TEXT("网格已重置！按 G 生成随机细胞")));
 		}
 	}
-
-	// 释放资源
-	DeleteObject(hGrayPen);
 }
 
 // 计算细胞（x列，y行）周围存活邻居数
@@ -345,14 +382,14 @@ void RestartTimer(HWND hWnd)
 	g_timerId = SetTimer(hWnd, 1, g_updateInterval, NULL); // 启动新定时器（使用当前速度）
 }
 
-// 新增：更新标题栏（含运行状态、当前速度、所有操作快捷键）
+// 更新标题栏（含运行状态、当前速度、所有操作快捷键）
 void UpdateWindowTitle(HWND hWnd)
 {
 	TCHAR title[200];
 	// 拼接标题内容：运行状态 + 当前速度 + 操作提示
 	wsprintf(title,
-	         TEXT("生命游戏 - %s | 速度：%d ms/帧 | 空格开始/暂停 | R重置 | G随机 | +/-加速减速 | ESC退出"),
-	         g_isRunning ? TEXT("运行中") : TEXT("已暂停"), // 显示当前运行状态
-	         g_updateInterval); // 显示当前速度
+		TEXT("生命游戏 - %s | 速度：%d ms/帧 | 空格开始/暂停 | R重置 | G随机 | +/-加速减速 | ESC退出"),
+		g_isRunning ? TEXT("运行中") : TEXT("已暂停"), // 显示当前运行状态
+		g_updateInterval); // 显示当前速度
 	SetWindowText(hWnd, title); // 设置窗口标题
 }
