@@ -284,7 +284,27 @@ int WINAPI WinMain(
 	}
 
 	// 计算窗口实际大小（适配边框和标题栏）
-	RECT windowRect = {0, 0, WINDOW_WIDTH, WINDOW_HEIGHT + STATUS_BAR_HEIGHT};
+	int gridWpx = CELL_SIZE * g_gridWidth;
+	int gridHpx = CELL_SIZE * g_gridHeight;
+	int topControlsH = 44; // 为 Edit/Button 留出空间
+	// 包含左侧固定面板宽度
+	int desiredClientW = LEFT_PANEL_WIDTH + gridWpx + 20; // 左侧面板 + 网格 + 两侧边距
+	int desiredClientH = gridHpx + STATUS_BAR_HEIGHT + topControlsH + 10;
+
+	// 保证窗口在列数较小时不会过窄：当列数小于40时，使用40列对应的最小客户端宽度
+	constexpr int MIN_VISIBLE_COLS = 40;
+	int minGridWpx = CELL_SIZE * MIN_VISIBLE_COLS;
+	int minClientW = LEFT_PANEL_WIDTH + minGridWpx + 20; // 包含左侧面板宽度
+	if (desiredClientW < minClientW) desiredClientW = minClientW;
+
+	// 保证窗口在行数较小时不会过矮：当行数小于40时，使用40行对应的最小客户端高度
+	constexpr int MIN_VISIBLE_ROWS = 40;
+	int minGridHpx = CELL_SIZE * MIN_VISIBLE_ROWS;
+	int minClientH = minGridHpx + STATUS_BAR_HEIGHT + topControlsH + 10;
+	if (desiredClientH < minClientH) desiredClientH = minClientH;
+
+	// 计算窗口外框尺寸
+	RECT windowRect = { 0, 0, desiredClientW, desiredClientH };
 	AdjustWindowRect(&windowRect, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX, FALSE);
 
 	// 创建窗口
