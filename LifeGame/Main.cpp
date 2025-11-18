@@ -35,6 +35,7 @@ std::vector<std::vector<bool>> g_grid; // 当前细胞状态（false=死亡，true=存活）
 std::vector<std::vector<bool>> g_nextGrid; // 下一代细胞状态
 bool g_isRunning = false; // 游戏运行状态（false=暂停，true=运行）
 UINT_PTR g_timerId = 0; // 定时器ID
+UINT_PTR g_tipTimerId = 0; // 提示定时器ID
 bool g_showResetTip = false; // 重置提示显示标记
 ULONGLONG g_resetTipTime = 0; // 重置提示显示时间
 // 鼠标拖拽绘制状态
@@ -89,7 +90,7 @@ void InitGrid(); // 初始化随机细胞网格
 void DrawGrid(HDC hdc, const RECT* pDirty); // 绘制细胞网格（含重置提示）
 int CountNeighbors(int x, int y); // 计算细胞周围存活邻居数
 void UpdateGrid(); // 计算下一代细胞状态
-void ResetGrid(); // 重置网格（全细胞死亡）
+UINT_PTR ResetGrid(HWND hWnd); // 重置网格（全细胞死亡）
 void RestartTimer(HWND hWnd); // 重启定时器（适配速度调整）
 void UpdateWindowTitle(HWND hWnd); // 更新标题栏（含速度提示）
 
@@ -457,16 +458,38 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 	// 定时器消息（控制游戏刷新）
 	case WM_TIMER:
-		if (g_isRunning)
+		if (wParam == 1) // 游戏更新定时器
 		{
-			UpdateGrid();
-			InvalidateRect(hWnd, nullptr, FALSE); // 不擦除背景，已由双缓冲处理
+			if (g_isRunning)
+			{
+				UpdateGrid();
+				InvalidateRect(hWnd, nullptr, FALSE);
+			}
+		}
+		else if (wParam == 2) // 重置提示隐藏定时器
+		{
+			g_showResetTip = false;
+			g_tipTimerId = 0; // 重置定时器ID
+			InvalidateRect(hWnd, nullptr, FALSE);
+			KillTimer(hWnd, 2); // 销毁定时器
 		}
 		break;
 
 	// 鼠标左键点击（切换细胞状态）
 	case WM_LBUTTONDOWN:
 		{
+			// 隐藏重置提示并取消定时器
+			if (g_showResetTip)
+			{
+				g_showResetTip = false;
+				if (g_tipTimerId != 0)
+				{
+					KillTimer(hWnd, 2);
+					g_tipTimerId = 0;
+				}
+				InvalidateRect(hWnd, nullptr, FALSE); // 立即重绘隐藏提示
+			}
+
 			int px = LOWORD(lParam);
 			int py = HIWORD(lParam);
 			int cellSize, offX, offY, gridWpx, gridHpx;
@@ -495,6 +518,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	// 鼠标移动：如果左键按下处于拖拽状态，则绘制路径上的格子
 	case WM_MOUSEMOVE:
 		{
+			// 隐藏重置提示并取消定时器
+			if (g_showResetTip && (g_isDragging || g_isRightDragging))
+			{
+				g_showResetTip = false;
+				if (g_tipTimerId != 0)
+				{
+					KillTimer(hWnd, 2);
+					g_tipTimerId = 0;
+				}
+				InvalidateRect(hWnd, nullptr, FALSE); // 立即重绘隐藏提示
+			}
+
 			if (g_isDragging || g_isRightDragging)
 			{
 				int px = LOWORD(lParam);
@@ -607,9 +642,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		case 'R': // 重置网格
 			g_isRunning = false;
 			KillTimer(hWnd, g_timerId);
-			ResetGrid();
+			// 如果已有提示定时器，先取消
+			if (g_tipTimerId != 0)
+			{
+				KillTimer(hWnd, 2);
+			}
+			g_tipTimerId = ResetGrid(hWnd); // 保存新的定时器ID
 			InvalidateRect(hWnd, nullptr, FALSE);
-			UpdateWindowTitle(hWnd); // 更新标题栏（暂停状态）
+			UpdateWindowTitle(hWnd);
 			break;
 		case 'G': // 生成随机初始状态
 			g_isRunning = false;
@@ -771,6 +811,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	// 窗口销毁消息
 	case WM_DESTROY:
 		KillTimer(hWnd, g_timerId);
+		if (g_tipTimerId != 0)
+		{
+			KillTimer(hWnd, 2);
+		}
 		PostQuitMessage(0);
 		break;
 
@@ -901,39 +945,29 @@ void DrawGrid(HDC hdc, const RECT* pDirty)
 	DrawText(hdc, TEXT("生命游戏"), -1, &titleRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 	SelectObject(hdc, hOldFont);
 
-	// 顶部放置输入控件（Rows/Cols 编辑与 Apply 按钮），由 Win32 控件负责绘制与交互
-
 	// 绘制重置提示（持续2秒），居中显示带边框的提示框（相对于网格区域）
 	if (g_showResetTip)
 	{
-		if (GetTickCount64() - g_resetTipTime > 2000)
-		{
-			g_showResetTip = false;
-		}
-		else
-		{
-			auto tip = TEXT("网格已重置！按 G 生成随机细胞");
-			auto hOld = static_cast<HFONT>(SelectObject(hdc, g_hTipFont));
-			RECT measure = {0, 0, 0, 0};
-			DrawText(hdc, tip, -1, &measure, DT_CALCRECT | DT_SINGLELINE);
-			int tw = measure.right - measure.left + 20;
-			int th = measure.bottom - measure.top + 10;
-			RECT box = {
-				offX + (gridWpx - tw) / 2, offY + (gridHpx - th) / 2, offX + (gridWpx + tw) / 2,
-				offY + (gridHpx + th) / 2
-			};
-			// 背景与边框
-			FillRect(hdc, &box, g_hTipBrush);
-			HPEN hPenTip = CreatePen(PS_SOLID, 1, RGB(200, 50, 50));
-			auto hOld2 = static_cast<HPEN>(SelectObject(hdc, hPenTip));
-			Rectangle(hdc, box.left, box.top, box.right, box.bottom);
-			SetTextColor(hdc, RGB(200, 30, 30));
-			DrawText(hdc, tip, -1, &box, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
-			SelectObject(hdc, hOld2);
-			DeleteObject(hPenTip);
-			SelectObject(hdc, hOld);
-			SelectObject(hdc, hOldFont);
-		}
+		auto tip = TEXT("网格已重置！按 G 生成随机细胞");
+		auto hOld = static_cast<HFONT>(SelectObject(hdc, g_hTipFont));
+		RECT measure = {0, 0, 0, 0};
+		DrawText(hdc, tip, -1, &measure, DT_CALCRECT | DT_SINGLELINE);
+		int tw = measure.right - measure.left + 20;
+		int th = measure.bottom - measure.top + 10;
+		RECT box = {
+			offX + (gridWpx - tw) / 2, offY + (gridHpx - th) / 2, offX + (gridWpx + tw) / 2,
+			offY + (gridHpx + th) / 2
+		};
+		// 背景与边框
+		FillRect(hdc, &box, g_hTipBrush);
+		HPEN hPenTip = CreatePen(PS_SOLID, 1, RGB(200, 50, 50));
+		auto hOld2 = static_cast<HPEN>(SelectObject(hdc, hPenTip));
+		Rectangle(hdc, box.left, box.top, box.right, box.bottom);
+		SetTextColor(hdc, RGB(200, 30, 30));
+		DrawText(hdc, tip, -1, &box, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
+		SelectObject(hdc, hOld2);
+		DeleteObject(hPenTip);
+		SelectObject(hdc, hOld);
 	}
 
 	// 底部状态栏：背景 + 文字（位于整个客户区底部）
@@ -1049,7 +1083,7 @@ void UpdateGrid()
 }
 
 // 重置网格（所有细胞设为死亡）
-void ResetGrid()
+UINT_PTR ResetGrid(HWND hWnd) // 返回定时器ID
 {
 	// 若网格尚未分配则分配
 	if (g_grid.size() != static_cast<size_t>(g_gridHeight) || g_grid.empty() || g_grid[0].size() != static_cast<size_t>(
@@ -1070,6 +1104,9 @@ void ResetGrid()
 	// 启用重置提示
 	g_showResetTip = true;
 	g_resetTipTime = GetTickCount64();
+
+	// 设置一个2秒后隐藏提示的定时器
+	return SetTimer(hWnd, 2, 2000, nullptr); // 使用不同的定时器ID
 }
 
 // 重启定时器（适配速度调整，避免多个定时器冲突）
