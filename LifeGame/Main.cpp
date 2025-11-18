@@ -430,38 +430,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
-	// 绘图消息
+		// 绘图消息
 	case WM_PAINT:
-		{
-			PAINTSTRUCT ps;
-			HDC hdc = BeginPaint(hWnd, &ps);
+	{
+		PAINTSTRUCT ps;
+		HDC hdc = BeginPaint(hWnd, &ps);
 
-			// 获取当前客户区并更新全局尺寸
-			RECT clientRect;
-			GetClientRect(hWnd, &clientRect);
-			g_clientWidth = clientRect.right - clientRect.left;
-			g_clientHeight = clientRect.bottom - clientRect.top;
+		// 获取当前客户区并更新全局尺寸
+		RECT clientRect;
+		GetClientRect(hWnd, &clientRect);
+		g_clientWidth = clientRect.right - clientRect.left;
+		g_clientHeight = clientRect.bottom - clientRect.top;
 
-			// 双缓冲：根据当前客户区大小创建位图
-			HDC memDC = CreateCompatibleDC(hdc);
-			HBITMAP hbm = CreateCompatibleBitmap(hdc, g_clientWidth, g_clientHeight);
-			auto hOldBmp = static_cast<HBITMAP>(SelectObject(memDC, hbm));
+		// 双缓冲：根据当前客户区大小创建位图
+		HDC memDC = CreateCompatibleDC(hdc);
+		HBITMAP hbm = CreateCompatibleBitmap(hdc, g_clientWidth, g_clientHeight);
+		auto hOldBmp = static_cast<HBITMAP>(SelectObject(memDC, hbm));
 
-			// 用柔和背景色填充整个客户区
-			FillRect(memDC, &clientRect, g_hBackgroundBrush);
+		// 用柔和背景色填充整个客户区
+		FillRect(memDC, &clientRect, g_hBackgroundBrush);
 
-			// 只重绘脏矩形区域（DrawGrid 内会绘制细胞、状态栏与提示）
-			DrawGrid(memDC, &ps.rcPaint);
+		// 只绘制非控件区域（排除左侧面板和状态栏）
+		RECT nonControlArea = clientRect;
+		nonControlArea.left = LEFT_PANEL_WIDTH; // 从左侧面板右边开始
+		nonControlArea.bottom -= STATUS_BAR_HEIGHT; // 排除状态栏
 
-			// 将缓冲区全部 blit 到窗口（更简单且稳定）
-			BitBlt(hdc, 0, 0, g_clientWidth, g_clientHeight, memDC, 0, 0, SRCCOPY);
+		// 只重绘脏矩形区域中的非控件部分
+		RECT dirtyNonControl = ps.rcPaint;
+		if (dirtyNonControl.left < LEFT_PANEL_WIDTH)
+			dirtyNonControl.left = LEFT_PANEL_WIDTH;
+		if (dirtyNonControl.bottom > clientRect.bottom - STATUS_BAR_HEIGHT)
+			dirtyNonControl.bottom = clientRect.bottom - STATUS_BAR_HEIGHT;
 
-			SelectObject(memDC, hOldBmp);
-			DeleteObject(hbm);
-			DeleteDC(memDC);
-			EndPaint(hWnd, &ps);
-			break;
+		if (dirtyNonControl.left < dirtyNonControl.right &&
+			dirtyNonControl.top < dirtyNonControl.bottom) {
+			DrawGrid(memDC, &dirtyNonControl);
 		}
+
+		// 将缓冲区全部 blit 到窗口
+		BitBlt(hdc, 0, 0, g_clientWidth, g_clientHeight, memDC, 0, 0, SRCCOPY);
+
+		SelectObject(memDC, hOldBmp);
+		DeleteObject(hbm);
+		DeleteDC(memDC);
+		EndPaint(hWnd, &ps);
+		break;
+	}
 
 	// 防止默认擦除背景，配合双缓冲可以减少闪烁
 	case WM_ERASEBKGND:
