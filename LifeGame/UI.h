@@ -1,9 +1,12 @@
-﻿#pragma once
+#pragma once
 
 #include <windows.h>
 #include <commctrl.h>
 #include "Game.h"
 #include "Renderer.h"
+#include "FileManager.h"
+#include "HelpWindow.h"
+#include "PatternPreview.h"
 
 class UI
 {
@@ -16,21 +19,17 @@ public:
 
 	void LayoutControls(int clientWidth, int clientHeight);
 	void UpdateWindowTitle(HWND hWnd, const LifeGame& game);
-	void HandleCommand(int id, int code, HWND hWnd, LifeGame& game);
+	void HandleCommand(int id, int code, HWND hWnd, LifeGame& game, Renderer* pRenderer = nullptr);
+	void SetAllFonts(HFONT hFont); // 新增：设置所有控件字体
 
-	// 鼠标处理
+	// 鼠标交互
 	bool HandleMouseClick(int x, int y, bool leftButton, LifeGame& game,
 	                      int clientWidth, int clientHeight);
 	bool HandleMouseMove(int x, int y, LifeGame& game,
 	                     int clientWidth, int clientHeight);
 	void HandleMouseUp(bool leftButton);
 
-	// 控件访问
-	HWND GetRowsEdit() const { return m_hRowsEdit; }
-	HWND GetColsEdit() const { return m_hColsEdit; }
-	HWND GetApplyBtn() const { return m_hApplyBtn; }
-
-	// 状态
+	// 状态查询
 	bool IsDragging() const { return m_isDragging || m_isRightDragging; }
 
 private:
@@ -40,24 +39,39 @@ private:
 	HWND m_hApplyBtn;
 	HWND m_hRowsLabel;
 	HWND m_hColsLabel;
+	HWND m_hPatternLabel; // 新增
+	HWND m_hPatternCombo; // 新增
+	HWND m_hRuleLabel; // 新增
+	HWND m_hRuleCombo; // 新增
+	HWND m_hSizeLabel; // 新增
+	HWND m_hSizeCombo; // 新增
+	HWND m_hSaveBtn; // 新增：保存按钮
+	HWND m_hLoadBtn; // 新增：加载按钮
+	HWND m_hExportBtn; // 新增：导出按钮
+	HWND m_hSettingsBtn; // 新增：设置按钮
+	HWND m_hHelpBtn; // 新增：帮助按钮
+	HWND m_hUndoBtn; // 新增：撤销按钮
 	HWND m_hToolTip;
 
-	// 子类化过程
+	FileManager m_fileManager; // 新增：文件管理器实例
+	HelpWindow m_helpWindow; // 新增：帮助窗口实例
+	PatternPreview m_preview; // 新增：图案预览
+
+	// 窗口子类化
 	WNDPROC m_oldRowsProc;
 	WNDPROC m_oldColsProc;
 	WNDPROC m_oldApplyBtnProc;
 
-	// 鼠标状态
+	// 交互状态
 	bool m_isDragging;
 	bool m_isRightDragging;
 	bool m_dragValue;
 	bool m_applyHover;
 
-	// 子类化窗口过程
+	// 静态回调函数
 	static LRESULT CALLBACK RowsEditProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 	static LRESULT CALLBACK ColsEditProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 	static LRESULT CALLBACK ApplyBtnProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);
 
-	// 实例指针用于静态回调
 	static UI* s_pInstance;
 };

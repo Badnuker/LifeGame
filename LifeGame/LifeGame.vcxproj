@@ -102,6 +102,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -117,6 +118,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -125,15 +127,39 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Application.cpp" />
+    <ClCompile Include="CommandHistory.cpp" />
+    <ClCompile Include="FileManager.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="HelpWindow.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="PatternLibrary.cpp" />
+    <ClCompile Include="PatternPreview.cpp" />
+    <ClCompile Include="PlacePatternCommand.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="RuleEngine.cpp" />
+    <ClCompile Include="SetCellCommand.cpp" />
+    <ClCompile Include="SettingsDialog.cpp" />
+    <ClCompile Include="Statistics.cpp" />
     <ClCompile Include="UI.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Application.h" />
+    <ClInclude Include="Command.h" />
+    <ClInclude Include="CommandHistory.h" />
+    <ClInclude Include="FileManager.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="HelpWindow.h" />
+    <ClInclude Include="PatternLibrary.h" />
+    <ClInclude Include="PatternPreview.h" />
+    <ClInclude Include="PlacePatternCommand.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="RuleEngine.h" />
+    <ClInclude Include="SetCellCommand.h" />
+    <ClInclude Include="Settings.h" />
+    <ClInclude Include="SettingsDialog.h" />
+    <ClInclude Include="Statistics.h" />
     <ClInclude Include="UI.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

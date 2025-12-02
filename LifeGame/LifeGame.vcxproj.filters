@@ -27,6 +27,39 @@
     <ClCompile Include="UI.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Application.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="CommandHistory.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="FileManager.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="HelpWindow.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PatternLibrary.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PatternPreview.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="PlacePatternCommand.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="RuleEngine.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SetCellCommand.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SettingsDialog.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Statistics.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resource.h">
@@ -39,6 +72,45 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="UI.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Application.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Command.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandHistory.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="FileManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="HelpWindow.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PatternLibrary.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PatternPreview.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PlacePatternCommand.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="RuleEngine.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SetCellCommand.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Settings.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SettingsDialog.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Statistics.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
