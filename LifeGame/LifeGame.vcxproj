@@ -140,6 +140,7 @@
     <ClCompile Include="RuleEngine.cpp" />
     <ClCompile Include="SetCellCommand.cpp" />
     <ClCompile Include="SettingsDialog.cpp" />
+    <ClCompile Include="SplashWindow.cpp" />
     <ClCompile Include="Statistics.cpp" />
     <ClCompile Include="UI.cpp" />
   </ItemGroup>
@@ -159,6 +160,7 @@
     <ClInclude Include="SetCellCommand.h" />
     <ClInclude Include="Settings.h" />
     <ClInclude Include="SettingsDialog.h" />
+    <ClInclude Include="SplashWindow.h" />
     <ClInclude Include="Statistics.h" />
     <ClInclude Include="UI.h" />
   </ItemGroup>

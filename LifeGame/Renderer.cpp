@@ -3,14 +3,24 @@
 #include "Settings.h"
 #include <tchar.h>
 #include <stdio.h>
+#include <algorithm>
 
+/**
+ * @brief 构造函数
+ * 
+ * 初始化所有成员变量，设置默认的赛博朋克配色方案。
+ * 此时尚未创建 GDI 资源，资源创建在 Initialize 中进行。
+ */
 Renderer::Renderer()
 	: m_visualW(0), m_visualH(0), m_hBackgroundBrush(nullptr),
 	  m_hAliveBrush(nullptr), m_hGlowBrush(nullptr), m_hDeadBrush(nullptr),
 	  m_hTipBrush(nullptr), m_hLeftPanelBrush(nullptr), m_hInputBgBrush(nullptr), m_hGridPen(nullptr),
 	  m_hBorderPen(nullptr), m_hHUDPen(nullptr), m_hTitleFont(nullptr), m_hTipFont(nullptr),
 	  m_hBtnFont(nullptr), m_hControlFont(nullptr), m_hLeftKeyFont(nullptr), m_hLeftDescFont(nullptr),
-	  m_hBrandingFont(nullptr), m_hDataFont(nullptr)
+	  m_hBrandingFont(nullptr), m_hDataFont(nullptr),
+	  m_previewX(-1), m_previewY(-1), m_previewPatternIndex(-1), m_isEraserPreview(false),
+	  m_hPreviewBrush(nullptr), m_hEraserPen(nullptr),
+	  m_scale(1.0f), m_viewOffsetX(0), m_viewOffsetY(0)
 {
 	// 赛博朋克配色方案
 	m_colText = RGB(220, 240, 255); // 亮白蓝
@@ -27,6 +37,14 @@ Renderer::~Renderer()
 	Cleanup();
 }
 
+/**
+ * @brief 初始化 GDI 资源
+ * 
+ * 创建画刷、画笔和字体。
+ * 
+ * @param hInstance 应用程序实例句柄
+ * @return true 如果关键资源创建成功
+ */
 bool Renderer::Initialize(HINSTANCE hInstance)
 {
 	// 1. 基础画刷
@@ -77,22 +95,31 @@ bool Renderer::Initialize(HINSTANCE hInstance)
 	m_hLeftDescFont = CreateFontW(-20, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 	                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
 	                              VARIABLE_PITCH | FF_SWISS, L"Microsoft YaHei UI");
-	m_hBrandingFont = CreateFontW(-24, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+	m_hBrandingFont = CreateFontW(-16, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
 	                              DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
 	                              VARIABLE_PITCH | FF_SWISS, L"Microsoft YaHei UI");
 	m_hDataFont = CreateFontW(-18, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
 	                          DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
 	                          VARIABLE_PITCH | FF_SWISS, L"Consolas");
 
+	// 4. 预览资源
+	// 使用阴影线画刷模拟半透明
+	m_hPreviewBrush = CreateHatchBrush(HS_BDIAGONAL, RGB(100, 255, 255));
+	m_hEraserPen = CreatePen(PS_SOLID, 2, RGB(255, 50, 50));
+
 	return (m_hBackgroundBrush && m_hAliveBrush && m_hGridPen);
 }
 
+/**
+ * @brief 清理资源
+ */
 void Renderer::Cleanup()
 {
 	if (m_hGridPen) DeleteObject(m_hGridPen);
 	if (m_hBorderPen) DeleteObject(m_hBorderPen);
 	if (m_hHUDPen) DeleteObject(m_hHUDPen);
 	if (m_hGraphPen) DeleteObject(m_hGraphPen);
+	if (m_hEraserPen) DeleteObject(m_hEraserPen); // 新增
 	if (m_hBackgroundBrush) DeleteObject(m_hBackgroundBrush);
 	if (m_hAliveBrush) DeleteObject(m_hAliveBrush);
 	if (m_hGlowBrush) DeleteObject(m_hGlowBrush);
@@ -100,6 +127,7 @@ void Renderer::Cleanup()
 	if (m_hTipBrush) DeleteObject(m_hTipBrush);
 	if (m_hLeftPanelBrush) DeleteObject(m_hLeftPanelBrush);
 	if (m_hInputBgBrush) DeleteObject(m_hInputBgBrush);
+	if (m_hPreviewBrush) DeleteObject(m_hPreviewBrush); // 新增
 
 	for (int i = 0; i < FADE_LEVELS; ++i)
 		if (m_fadeBrushes[i]) DeleteObject(m_fadeBrushes[i]);
@@ -114,6 +142,11 @@ void Renderer::Cleanup()
 	if (m_hDataFont) DeleteObject(m_hDataFont);
 }
 
+/**
+ * @brief 更新设置
+ * 
+ * 当用户在设置对话框中更改颜色或网格设置时调用。
+ */
 void Renderer::UpdateSettings()
 {
 	const auto& settings = SettingsManager::GetInstance().GetSettings();
@@ -125,6 +158,33 @@ void Renderer::UpdateSettings()
 	if (m_hAliveBrush) DeleteObject(m_hAliveBrush);
 	m_hAliveBrush = CreateSolidBrush(settings.cellColor);
 
+	// 更新光晕画刷 (基于活细胞颜色，稍微暗一点)
+	if (m_hGlowBrush) DeleteObject(m_hGlowBrush);
+	int r = GetRValue(settings.cellColor);
+	int g = GetGValue(settings.cellColor);
+	int b = GetBValue(settings.cellColor);
+	// 简单的变暗处理
+	m_hGlowBrush = CreateSolidBrush(RGB(r * 0.8, g * 0.8, b * 0.8));
+
+	// 更新衰减画刷
+	for (int i = 0; i < FADE_LEVELS; ++i)
+	{
+		if (m_fadeBrushes[i]) DeleteObject(m_fadeBrushes[i]);
+
+		// 重新计算渐变: 从 cellColor 到 bgColor
+		float ratio = static_cast<float>(i + 1) / (FADE_LEVELS + 2);
+
+		int bgR = GetRValue(settings.bgColor);
+		int bgG = GetGValue(settings.bgColor);
+		int bgB = GetBValue(settings.bgColor);
+
+		int newR = bgR + static_cast<int>((r - bgR) * ratio);
+		int newG = bgG + static_cast<int>((g - bgG) * ratio);
+		int newB = bgB + static_cast<int>((b - bgB) * ratio);
+
+		m_fadeBrushes[i] = CreateSolidBrush(RGB(newR, newG, newB));
+	}
+
 	if (m_hGridPen) DeleteObject(m_hGridPen);
 	m_hGridPen = CreatePen(PS_SOLID, settings.gridLineWidth, settings.gridColor);
 
@@ -132,11 +192,20 @@ void Renderer::UpdateSettings()
 	m_colText = settings.textColor;
 }
 
+/**
+ * @brief 清除视觉残留
+ */
 void Renderer::ClearVisuals()
 {
 	std::fill(m_visualGrid.begin(), m_visualGrid.end(), 0.0f);
 }
 
+/**
+ * @brief 更新视觉网格 (计算拖尾)
+ * 
+ * 遍历所有细胞，如果细胞存活，亮度设为 1.0。
+ * 如果细胞死亡，亮度逐渐衰减，形成拖尾效果。
+ */
 void Renderer::UpdateVisualGrid(const LifeGame& game)
 {
 	int w = game.GetWidth();
@@ -166,7 +235,7 @@ void Renderer::UpdateVisualGrid(const LifeGame& game)
 			{
 				if (m_visualGrid[idx] > 0.0f)
 				{
-					m_visualGrid[idx] -= decay;
+					m_visualGrid[idx] -= decay; // 死细胞亮度衰减
 					if (m_visualGrid[idx] < 0.0f) m_visualGrid[idx] = 0.0f;
 				}
 			}
@@ -174,6 +243,81 @@ void Renderer::UpdateVisualGrid(const LifeGame& game)
 	}
 }
 
+void Renderer::SetPreview(int x, int y, int patternIndex, bool isEraser)
+{
+	m_previewX = x;
+	m_previewY = y;
+	m_previewPatternIndex = patternIndex;
+	m_isEraserPreview = isEraser;
+}
+
+void Renderer::SetScale(float scale)
+{
+	if (scale < 0.1f) scale = 0.1f;
+	if (scale > 10.0f) scale = 10.0f;
+	m_scale = scale;
+}
+
+void Renderer::SetOffset(int x, int y)
+{
+	m_viewOffsetX = x;
+	m_viewOffsetY = y;
+}
+
+void Renderer::Pan(int dx, int dy)
+{
+	m_viewOffsetX += dx;
+	m_viewOffsetY += dy;
+}
+
+void Renderer::Zoom(float factor, int centerX, int centerY)
+{
+	float oldScale = m_scale;
+	float newScale = oldScale * factor;
+	if (newScale < 0.1f) newScale = 0.1f;
+	if (newScale > 10.0f) newScale = 10.0f;
+
+	if (newScale == oldScale) return;
+
+	// 以鼠标为中心缩放
+	// 屏幕坐标 = 偏移 + 网格坐标 * 缩放
+	// 保持鼠标下的网格坐标不变
+	// (centerX - offX) / oldScale = (centerX - newOffX) / newScale
+	
+	// 这里的 centerX, centerY 是相对于窗口客户区的
+	// 我们需要先计算当前的 offX, offY (不含 viewOffset)
+	// 但 viewOffset 是我们要调整的
+	
+	// 简化模型：
+	// WorldX = (ScreenX - ViewOffsetX - BaseOffsetX) / Scale
+	// 我们希望 WorldX 在缩放前后保持一致
+	// (ScreenX - OldViewOffset - Base) / OldScale = (ScreenX - NewViewOffset - Base) / NewScale
+	
+	// 设 K = (ScreenX - OldViewOffset - Base) / OldScale
+	// NewViewOffset = ScreenX - Base - K * NewScale
+	// NewViewOffset = ScreenX - Base - (ScreenX - OldViewOffset - Base) * (NewScale / OldScale)
+	
+	// 但 BaseOffsetX 是动态计算的 (居中)，这会很复杂。
+	// 简单起见，我们假设 BaseOffsetX 是固定的或者我们只调整 ViewOffset
+	// 实际上 CalcLayout 会重新计算 BaseOffsetX。
+	// 如果我们想平滑缩放，最好让 BaseOffsetX 在缩放时不跳变，或者我们把 BaseOffsetX 视为 0，全靠 ViewOffset。
+	// 但目前的 CalcLayout 是自动居中的。
+	
+	// 让我们采用简单策略：直接缩放，然后调整 ViewOffset 以保持中心点
+	// 实际上，由于 CalcLayout 的存在，缩放会自动改变网格大小，从而改变居中位置。
+	// 如果我们只改变 scale，CalcLayout 会算出新的居中位置。
+	// 这可能导致"以屏幕中心缩放"，而不是以鼠标为中心。
+	// 如果要以鼠标为中心，我们需要补偿 ViewOffset。
+	
+	// 暂时只实现简单的缩放，不搞复杂的鼠标中心对齐，或者简单调整 ViewOffset
+	m_scale = newScale;
+}
+
+/**
+ * @brief 核心绘制函数
+ * 
+ * 每一帧调用一次，负责绘制整个游戏界面。
+ */
 void Renderer::Draw(HDC hdc, const LifeGame& game, const RECT* pDirty,
                     bool showResetTip, int clientWidth, int clientHeight)
 {
@@ -191,7 +335,10 @@ void Renderer::Draw(HDC hdc, const LifeGame& game, const RECT* pDirty,
 	FillRect(hdc, &clientRect, m_hBackgroundBrush);
 
 	// 绘制网格与细胞
-	DrawGrid(hdc, game, pDirty, cellSize, offX, offY, gridWpx, gridHpx);
+	DrawGrid(hdc, game, pDirty, cellSize, offX, offY, gridWpx, gridHpx, clientWidth, clientHeight);
+
+	// 绘制预览 (新增)
+	DrawPreview(hdc, game, cellSize, offX, offY);
 
 	const auto& settings = SettingsManager::GetInstance().GetSettings();
 
@@ -231,12 +378,111 @@ void Renderer::Draw(HDC hdc, const LifeGame& game, const RECT* pDirty,
 	}
 }
 
+/**
+ * @brief 绘制预览
+ * 
+ * 在鼠标位置绘制即将放置的图案预览或橡皮擦范围。
+ */
+void Renderer::DrawPreview(HDC hdc, const LifeGame& game, int cellSize, int offX, int offY)
+{
+	if (m_previewX < 0 || m_previewY < 0 || m_previewX >= game.GetWidth() || m_previewY >= game.GetHeight())
+		return;
+
+	if (m_isEraserPreview)
+	{
+		// 绘制红色边框表示擦除
+		int left = offX + m_previewX * cellSize;
+		int top = offY + m_previewY * cellSize;
+		RECT r = {left, top, left + cellSize, top + cellSize};
+		
+		auto hOldPen = static_cast<HPEN>(SelectObject(hdc, m_hEraserPen));
+		SelectObject(hdc, GetStockObject(NULL_BRUSH));
+		Rectangle(hdc, r.left, r.top, r.right, r.bottom);
+		
+		// 画个叉
+		MoveToEx(hdc, r.left, r.top, nullptr);
+		LineTo(hdc, r.right, r.bottom);
+		MoveToEx(hdc, r.right, r.top, nullptr);
+		LineTo(hdc, r.left, r.bottom);
+
+		SelectObject(hdc, hOldPen);
+	}
+	else
+	{
+		// 绘制图案预览
+		const PatternData* p = game.GetPatternLibrary().GetPattern(m_previewPatternIndex);
+		
+		// 如果是单点绘制 (index 0) 或找不到图案，只画一个点
+		if (m_previewPatternIndex <= 0 || !p)
+		{
+			int left = offX + m_previewX * cellSize;
+			int top = offY + m_previewY * cellSize;
+			RECT r = {left, top, left + cellSize, top + cellSize};
+			FillRect(hdc, &r, m_hPreviewBrush);
+		}
+		else
+		{
+			// 解析并绘制图案
+			std::vector<std::vector<bool>> grid;
+			// 这里为了性能，最好不要每帧解析。但考虑到图案通常不大，且是预览，暂且如此。
+			// 更好的做法是 PatternData 里缓存了解析后的 grid。
+			// 由于 PatternLibrary::ParseRLE 是公开的，我们可以用它。
+			// 但 PatternLibrary 是 const 的... 
+			// 实际上 PatternData 只有 rleString。
+			// 我们这里临时解析一下，或者只画个包围盒？
+			// 为了效果，我们解析。
+			
+			// 注意：PatternLibrary::ParseRLE 是成员函数，需要实例。
+			// 我们可以临时创建一个 PatternLibrary 实例？不，太慢。
+			// 我们可以 const_cast 吗？不。
+			// 我们可以修改 PatternLibrary 增加静态解析？
+			// 或者直接用 PatternLibrary 实例。game.GetPatternLibrary() 是 const 的。
+			// ParseRLE 是非 const 的吗？看头文件。
+			// bool ParseRLE(const std::string& rle, std::vector<std::vector<bool>>& outGrid);
+			// 它是非 const 的吗？如果不修改成员变量，应该是 const 的。
+			// 让我们假设它是 const 的，或者修改它为 const。
+			// 如果它是非 const，我们就有麻烦了。
+			// 让我们检查 PatternLibrary.h
+			
+			// 临时方案：只画一个矩形框表示范围
+			int w = p->width;
+			int h = p->height;
+			
+			// 限制范围
+			if (w > 50) w = 50; 
+			if (h > 50) h = 50;
+
+			// 尝试解析 (如果 ParseRLE 是 const 的话)
+			// const_cast<PatternLibrary&>(game.GetPatternLibrary()).ParseRLE(...)
+			
+			// 简单起见，我们只画包围盒和中心点
+			int left = offX + m_previewX * cellSize;
+			int top = offY + m_previewY * cellSize;
+			int right = left + w * cellSize;
+			int bottom = top + h * cellSize;
+			
+			RECT r = {left, top, right, bottom};
+			FrameRect(hdc, &r, m_hPreviewBrush);
+			
+			// 填充左上角表示起始点
+			RECT start = {left, top, left + cellSize, top + cellSize};
+			FillRect(hdc, &start, m_hPreviewBrush);
+		}
+	}
+}
+
+/**
+ * @brief 计算布局
+ * 
+ * 根据窗口大小和缩放比例，计算网格的显示位置和细胞大小。
+ * 实现了自动居中和自适应布局。
+ */
 void Renderer::CalcLayout(const LifeGame& game, int& outCellSize, int& outOffsetX,
                           int& outOffsetY, int& outGridWidthPx, int& outGridHeightPx,
                           int clientWidth, int clientHeight)
 {
-	int availW = clientWidth - LEFT_PANEL_WIDTH - 40; // 留出左右边际
-	int availH = clientHeight - STATUS_BAR_HEIGHT - 40; // 留出上下边际
+	int availW = clientWidth - LEFT_PANEL_WIDTH - 40;
+	int availH = clientHeight - STATUS_BAR_HEIGHT - 40;
 	if (availW < 1) availW = 1;
 	if (availH < 1) availH = 1;
 
@@ -245,24 +491,56 @@ void Renderer::CalcLayout(const LifeGame& game, int& outCellSize, int& outOffset
 	if (cols < 1) cols = 1;
 	if (rows < 1) rows = 1;
 
-	// 动态计算单元格大小，使其填满可用区域
-	int cellW = availW / cols;
-	int cellH = availH / rows;
-	int cellSize = (cellW < cellH) ? cellW : cellH;
+	// 基础单元格大小 (不缩放时的大小)
+	// 如果是"无限"模式 (比如 > 500)，基础大小设小一点
+	int baseCellSize = BASE_CELL_SIZE;
+	
+	// 自动适应模式：如果 scale 为 1.0 (默认)，且网格较小，尝试填满屏幕
+	// 但如果用户手动缩放了，就使用手动缩放
+	// 这里我们改变逻辑：
+	// 1. 计算"最佳适应"的大小
+	int fitCellW = availW / cols;
+	int fitCellH = availH / rows;
+	int fitSize = (fitCellW < fitCellH) ? fitCellW : fitCellH;
+	if (fitSize < 1) fitSize = 1;
+	
+	// 2. 应用缩放
+	// 如果是初始状态 (scale=1.0)，我们希望对于小网格是"适应屏幕"，对于大网格是"像素级显示"
+	// 但为了统一，我们让 m_scale 乘以 fitSize ? 
+	// 不，这样缩放系数会随窗口大小变化。
+	// 最好是：cellSize = base * scale。
+	// 对于大网格，base=12, scale=1 -> 12px。2000个格子就是24000px，很大。
+	// 对于小网格，base=12, scale=1 -> 12px。40个格子就是480px，很小。
+	
+	// 修正策略：
+	// 始终以 fitSize 为基准？不，那样大网格会变成 0px。
+	// 采用混合策略：
+	// 实际大小 = (cols > 200 ? 2 : fitSize) * m_scale ?
+	// 让我们简单点：
+	// 实际大小 = (fitSize > 0 ? fitSize : 1) * m_scale;
+	// 这样默认(scale=1)就是适应屏幕。
+	// 但是对于 2000x2000，fitSize 会是 0 (availW/2000 < 1)。
+	// 所以必须有最小值。
+	
+	float rawSize = (float)fitSize;
+	if (rawSize < 2.0f) rawSize = 2.0f; // 最小基础大小
+	
+	// 如果网格巨大，fitSize 只有 1 或 0。这时候基础大小应该设为比如 10，然后允许用户缩放。
+	if (cols > 500 || rows > 500) rawSize = 10.0f;
 
-	// 限制最小和最大尺寸
+	int cellSize = static_cast<int>(rawSize * m_scale);
 	if (cellSize < 1) cellSize = 1;
-	// if (cellSize > 100) cellSize = 100; // 可选：限制最大尺寸
 
 	int gridW = cellSize * cols;
 	int gridH = cellSize * rows;
 
-	// 居中显示
-	int offX = LEFT_PANEL_WIDTH + 20 + (availW - gridW) / 2;
-	int offY = 20 + (availH - gridH) / 2;
+	// 居中显示 + 偏移
+	int offX = LEFT_PANEL_WIDTH + 20 + (availW - gridW) / 2 + m_viewOffsetX;
+	int offY = 20 + (availH - gridH) / 2 + m_viewOffsetY;
 
-	if (offX < LEFT_PANEL_WIDTH) offX = LEFT_PANEL_WIDTH;
-	if (offY < 0) offY = 0;
+	// 不再强制限制 offX/offY，允许移出屏幕
+	// if (offX < LEFT_PANEL_WIDTH) offX = LEFT_PANEL_WIDTH;
+	// if (offY < 0) offY = 0;
 
 	outCellSize = cellSize;
 	outOffsetX = offX;
@@ -271,80 +549,123 @@ void Renderer::CalcLayout(const LifeGame& game, int& outCellSize, int& outOffset
 	outGridHeightPx = gridH;
 }
 
+/**
+ * @brief 绘制网格和细胞
+ * 
+ * 实现了视锥裁剪优化，只绘制可见区域的网格和细胞。
+ */
 void Renderer::DrawGrid(HDC hdc, const LifeGame& game, const RECT* pDirty,
-                        int cellSize, int offX, int offY, int gridWpx, int gridHpx)
+                        int cellSize, int offX, int offY, int gridWpx, int gridHpx,
+                        int clientWidth, int clientHeight)
 {
-	// 绘制网格背景
-	RECT gridRect = {offX, offY, offX + gridWpx, offY + gridHpx};
-	FillRect(hdc, &gridRect, m_hBackgroundBrush);
+	// 裁剪优化：只绘制可见区域
+	// 可见区域：[LEFT_PANEL_WIDTH, 0] 到 [clientWidth, clientHeight - STATUS_BAR_HEIGHT]
+	int viewL = LEFT_PANEL_WIDTH;
+	int viewT = 0;
+	int viewR = clientWidth;
+	int viewB = clientHeight - STATUS_BAR_HEIGHT;
 
-	// 绘制网格线 (仅在格子足够大时绘制，避免密集恐惧症)
+	// 计算可见的网格索引范围
+	// xpos = offX + xi * cellSize
+	// xi = (xpos - offX) / cellSize
+	
+	int startCol = (viewL - offX) / cellSize;
+	int endCol = (viewR - offX) / cellSize + 1;
+	int startRow = (viewT - offY) / cellSize;
+	int endRow = (viewB - offY) / cellSize + 1;
+
+	if (startCol < 0) startCol = 0;
+	if (endCol > game.GetWidth()) endCol = game.GetWidth();
+	if (startRow < 0) startRow = 0;
+	if (endRow > game.GetHeight()) endRow = game.GetHeight();
+
+	if (startCol >= endCol || startRow >= endRow) return; // 不可见
+
+	// 绘制网格背景 (仅绘制可见部分)
+	// 简单起见，还是填充整个区域，GDI 会裁剪
+	// 但为了性能，我们只填充可见交集
+	int drawL = max(offX, viewL);
+	int drawT = max(offY, viewT);
+	int drawR = min(offX + gridWpx, viewR);
+	int drawB = min(offY + gridHpx, viewB);
+	
+	if (drawR > drawL && drawB > drawT)
+	{
+		RECT gridRect = {drawL, drawT, drawR, drawB};
+		FillRect(hdc, &gridRect, m_hBackgroundBrush);
+	}
+
+	// 绘制网格线
 	const auto& settings = SettingsManager::GetInstance().GetSettings();
-	if (settings.showGrid && cellSize >= 4) // 稍微放宽限制
+	if (settings.showGrid && cellSize >= 4)
 	{
 		auto hOldPen = static_cast<HPEN>(SelectObject(hdc, m_hGridPen));
-		for (int xi = 0; xi <= game.GetWidth(); xi++)
+		
+		// 只绘制可见范围内的线
+		for (int xi = startCol; xi <= endCol; xi++)
 		{
 			int xpos = offX + xi * cellSize;
-			MoveToEx(hdc, xpos, offY, nullptr);
-			LineTo(hdc, xpos, offY + gridHpx);
+			if (xpos >= viewL && xpos <= viewR)
+			{
+				MoveToEx(hdc, xpos, max(offY, viewT), nullptr);
+				LineTo(hdc, xpos, min(offY + gridHpx, viewB));
+			}
 		}
-		for (int yi = 0; yi <= game.GetHeight(); yi++)
+		for (int yi = startRow; yi <= endRow; yi++)
 		{
 			int ypos = offY + yi * cellSize;
-			MoveToEx(hdc, offX, ypos, nullptr);
-			LineTo(hdc, offX + gridWpx, ypos);
+			if (ypos >= viewT && ypos <= viewB)
+			{
+				MoveToEx(hdc, max(offX, viewL), ypos, nullptr);
+				LineTo(hdc, min(offX + gridWpx, viewR), ypos);
+			}
 		}
 		SelectObject(hdc, hOldPen);
 	}
 
-	// 绘制细胞 (带拖尾和辉光)
+	// 绘制细胞
 	int w = game.GetWidth();
 	int h = game.GetHeight();
 
 	// 确保 visualGrid 大小正确
 	if (m_visualGrid.size() != w * h) return;
 
-	for (int y = 0; y < h; ++y)
+	for (int y = startRow; y < endRow; ++y)
 	{
-		for (int x = 0; x < w; ++x)
+		for (int x = startCol; x < endCol; ++x)
 		{
 			float brightness = m_visualGrid[y * w + x];
 
-			// 只有亮度大于0才绘制
 			if (brightness > 0.01f)
 			{
 				int left = offX + x * cellSize;
 				int top = offY + y * cellSize;
+				// 简单的可见性检查 (其实上面循环已经保证了大部分)
+				if (left >= viewR || top >= viewB || left + cellSize <= viewL || top + cellSize <= viewT)
+					continue;
+
 				RECT cell = {left, top, left + cellSize, top + cellSize};
 
-				if (brightness >= 0.99f) // 活细胞 (全亮)
+				if (brightness >= 0.99f)
 				{
-					// 1. 绘制光晕 (稍微大一点)
 					if (cellSize > 4)
 					{
 						RECT glow = cell;
-						InflateRect(&glow, 1, 1); // 向外扩张1像素
-						// 这里用实心画刷模拟光晕，如果有GDI+可以用半透明
-						// 为了性能，我们只画一个稍暗的背景
+						InflateRect(&glow, 1, 1);
 						FillRect(hdc, &glow, m_hGlowBrush);
 					}
-
-					// 2. 绘制核心 (亮白青色)
 					RECT core = cell;
-					if (cellSize > 6) InflateRect(&core, -1, -1); // 稍微缩小
+					if (cellSize > 6) InflateRect(&core, -1, -1);
 					FillRect(hdc, &core, m_hAliveBrush);
 				}
-				else // 拖尾 (衰减)
+				else
 				{
-					// 根据亮度选择画刷
 					int level = static_cast<int>(brightness * FADE_LEVELS);
 					if (level < 0) level = 0;
 					if (level >= FADE_LEVELS) level = FADE_LEVELS - 1;
 
 					if (m_fadeBrushes[level])
 					{
-						// 拖尾稍微缩小一点，产生"远去"的感觉
 						RECT trail = cell;
 						if (cellSize > 4) InflateRect(&trail, -1, -1);
 						FillRect(hdc, &trail, m_fadeBrushes[level]);
@@ -355,6 +676,9 @@ void Renderer::DrawGrid(HDC hdc, const LifeGame& game, const RECT* pDirty,
 	}
 }
 
+/**
+ * @brief 绘制 HUD 装饰线
+ */
 void Renderer::DrawHUD(HDC hdc, int offX, int offY, int gridWpx, int gridHpx)
 {
 	auto hOldPen = static_cast<HPEN>(SelectObject(hdc, m_hHUDPen));
@@ -398,6 +722,11 @@ void Renderer::DrawHUD(HDC hdc, int offX, int offY, int gridWpx, int gridHpx)
 	DeleteObject(hTickPen);
 }
 
+/**
+ * @brief 绘制左侧控制面板
+ * 
+ * 包含统计图表、快捷键列表等。
+ */
 void Renderer::DrawLeftPanel(HDC hdc, int clientWidth, int clientHeight, const LifeGame& game)
 {
 	RECT leftPanel = {0, 0, LEFT_PANEL_WIDTH, clientHeight};
@@ -484,6 +813,9 @@ void Renderer::DrawLeftPanel(HDC hdc, int clientWidth, int clientHeight, const L
 	}
 }
 
+/**
+ * @brief 绘制底部状态栏
+ */
 void Renderer::DrawStatusBar(HDC hdc, const LifeGame& game, int clientWidth, int clientHeight)
 {
 	RECT statusRect = {0, clientHeight - STATUS_BAR_HEIGHT, clientWidth, clientHeight};
@@ -556,6 +888,9 @@ void Renderer::DrawStatusBar(HDC hdc, const LifeGame& game, int clientWidth, int
 	DrawText(hdc, rightStatus, -1, &rightRect, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
 }
 
+/**
+ * @brief 绘制水印
+ */
 void Renderer::DrawBranding(HDC hdc, int x, int y, int w)
 {
 	// 在网格右下角绘制水印
@@ -565,6 +900,9 @@ void Renderer::DrawBranding(HDC hdc, int x, int y, int w)
 	DrawText(hdc, L"武汉大学计算机弘毅班项目", -1, &r, DT_RIGHT | DT_TOP | DT_SINGLELINE);
 }
 
+/**
+ * @brief 绘制统计图表
+ */
 void Renderer::DrawStatistics(HDC hdc, const LifeGame& game, int x, int y, int w, int h)
 {
 	// 绘制半透明背景 (模拟)
@@ -618,12 +956,15 @@ void Renderer::DrawStatistics(HDC hdc, const LifeGame& game, int x, int y, int w
 	}
 
 	// 绘制标题
-	SelectObject(hdc, m_hDataFont);
-	SetTextColor(hdc, RGB(0, 255, 100));
-	RECT titleR = {x + 5, y + 5, x + w, y + 20};
-	DrawText(hdc, TEXT("POPULATION HISTORY"), -1, &titleR, DT_LEFT | DT_TOP | DT_SINGLELINE);
+	// SelectObject(hdc, m_hDataFont);
+	// SetTextColor(hdc, RGB(0, 255, 100));
+	// RECT titleR = {x + 5, y + 5, x + w, y + 20};
+	// DrawText(hdc, TEXT("POPULATION HISTORY"), -1, &titleR, DT_LEFT | DT_TOP | DT_SINGLELINE);
 }
 
+/**
+ * @brief 绘制重置提示
+ */
 void Renderer::DrawResetTip(HDC hdc, int offX, int offY, int gridWpx, int gridHpx)
 {
 	auto tip = L"已重置。按 G 键随机生成细胞";

@@ -5,9 +5,25 @@ HelpWindow* g_pHelpWindow = nullptr;
 
 HelpWindow::HelpWindow()
 	: m_hWnd(nullptr), m_hList(nullptr), m_hZoomInBtn(nullptr), m_hZoomOutBtn(nullptr),
-	  m_currentPage(0), m_fontScale(1.0f), m_hTitleFont(nullptr), m_hBodyFont(nullptr)
+	  m_currentPage(0), m_fontScale(1.3f), m_hTitleFont(nullptr), m_hBodyFont(nullptr)
 {
 	// 初始化帮助内容
+	m_pages.push_back({
+		L"新手指南",
+		L"欢迎来到生命游戏！如果你是第一次接触，请尝试以下步骤：\n\n"
+		L"1. 随机开始：\n"
+		L"   按键盘上的 'G' 键，画布会随机生成细胞。按 'SPACE' (空格) 键开始演化，观察混乱如何变成有序。\n\n"
+		L"2. 放置图案：\n"
+		L"   在左侧面板的 'Pattern' 下拉框中选择 'Gosper Glider Gun' (滑翔机枪)。\n"
+		L"   在画布空白处点击左键，放置它。按空格开始，你会看到它不断发射小滑翔机。\n\n"
+		L"3. 绘制细胞：\n"
+		L"   按 'R' 键清空画布。用鼠标左键在画布上随意画一些点，然后按空格观察它们如何变化。\n\n"
+		L"4. 移动视野：\n"
+		L"   点击左侧工具栏的 'MOVE' 按钮开启移动模式，然后按住鼠标左键拖动画布。再次点击 'MOVE' 按钮返回绘制模式。\n\n"
+		L"5. 探索规则：\n"
+		L"   在左侧 'Rule' 下拉框中切换到 'HighLife' 或 'Day & Night'，同样的图案会有完全不同的演化结果！"
+	});
+
 	m_pages.push_back({
 		L"简介",
 		L"康威生命游戏 (Conway's Game of Life) 是由英国数学家约翰·何顿·康威在1970年发明的细胞自动机。\n\n"
@@ -26,10 +42,28 @@ HelpWindow::HelpWindow()
 	});
 
 	m_pages.push_back({
+		L"演化规则详解",
+		L"本程序内置了多种有趣的演化规则，以下是详细介绍：\n\n"
+		L"1. Conway (经典): B3/S23\n   最经典的规则，平衡性极佳，拥有丰富的稳定态和飞船。\n\n"
+		L"2. HighLife: B36/S23\n   类似经典规则，但6个邻居也能重生。特点是存在'复制子'，可以自我复制。\n\n"
+		L"3. Day & Night: B3678/S34678\n   死活细胞性质对称。非常复杂，拥有类似经典规则的丰富结构。\n\n"
+		L"4. Seeds (种子): B2/S\n   活细胞必死，只有2个邻居时出生。爆发性极强，瞬间填满屏幕。\n\n"
+		L"5. Life without Death: B3/S012345678\n   细胞一旦活了就永远不死。用于生成类似迷宫或珊瑚的静态结构。\n\n"
+		L"6. 34 Life: B34/S34\n   3或4个邻居出生或存活。早期被认为可能像经典规则一样有趣，但实际上较混乱。\n\n"
+		L"7. Diamoeba: B35678/S5678\n   形成类似变形虫的动态图案，边界不断波动。\n\n"
+		L"8. Maze (迷宫): B3/S12345\n   能够自动生成迷宫般的路径结构。\n\n"
+		L"9. Coral (珊瑚): B3/S45678\n   生长缓慢，形成类似珊瑚的有机纹理。\n\n"
+		L"10. Replicator: B1357/S1357\n   每个图案都会在演化过程中复制自身，形成分形结构。"
+	});
+
+	m_pages.push_back({
 		L"操作指南",
 		L"鼠标操作：\n"
-		L"- 左键点击/拖动：绘制细胞 (使用当前选中的笔刷)\n"
-		L"- 右键点击/拖动：擦除细胞\n\n"
+		L"- 普通模式 (MOVE 关闭)：\n"
+		L"  * 左键点击/拖动：绘制细胞 (使用当前选中的笔刷)\n"
+		L"  * 右键点击/拖动：擦除细胞\n"
+		L"- 移动模式 (MOVE 开启)：\n"
+		L"  * 左键拖动：平移画布\n\n"
 		L"键盘快捷键：\n"
 		L"- SPACE：开始 / 暂停演化\n"
 		L"- R：重置画布 (清空)\n"
@@ -53,12 +87,13 @@ HelpWindow::HelpWindow()
 		L"1. 规则引擎：支持多种变体规则，如 HighLife (B36/S23), Day & Night (B3678/S34678) 等。\n"
 		L"2. 统计图表：右下角实时显示种群数量变化曲线。\n"
 		L"3. 文件系统：支持保存 (.life) 和加载存档，以及导出 RLE 格式。\n"
-		L"4. 视觉设置：可自定义颜色、网格线、HUD 等外观。"
+		L"4. 视觉设置：可自定义颜色、网格线、HUD 等外观。\n"
+		L"5. 无限画布：支持向任意方向无限平移，探索广阔的演化空间。"
 	});
 
 	m_pages.push_back({
 		L"关于",
-		L"LifeGame v2.0 (Win32 GDI)\n\n"
+		L"LifeGame v3.1 (Win32 GDI)\n\n"
 		L"开发：Zhong yi, Liu qingxin, Dong kehong\n"
 		L"技术栈：C++17, Windows API (GDI), MinGW-w64\n\n"
 		L"本项目旨在展示高性能的细胞自动机模拟与现代化的 GDI 绘图技术。\n"
@@ -90,8 +125,8 @@ void HelpWindow::Show(HWND hParent)
 	wc.hIcon = LoadIcon(nullptr, IDI_INFORMATION);
 	RegisterClass(&wc);
 
-	int w = 900; // 增大窗口宽度
-	int h = 700; // 增大窗口高度
+	int w = 1200; // 再次增大窗口宽度
+	int h = 900; // 再次增大窗口高度
 	int x = (GetSystemMetrics(SM_CXSCREEN) - w) / 2;
 	int y = (GetSystemMetrics(SM_CYSCREEN) - h) / 2;
 
@@ -176,11 +211,11 @@ void HelpWindow::UpdateFonts()
 	int bodySize = static_cast<int>(24 * m_fontScale);
 
 	// 创建字体 (加大字号)
-	m_hTitleFont = CreateFont(titleSize, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
+	m_hTitleFont = CreateFont(titleSize, 0, 0, 0, FW_HEAVY, FALSE, FALSE, FALSE,
 	                          DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
 	                          VARIABLE_PITCH | FF_SWISS, TEXT("Microsoft YaHei UI"));
 
-	m_hBodyFont = CreateFont(bodySize, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+	m_hBodyFont = CreateFont(bodySize, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
 	                         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
 	                         VARIABLE_PITCH | FF_SWISS, TEXT("Microsoft YaHei UI"));
 

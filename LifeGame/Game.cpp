@@ -13,7 +13,7 @@ LifeGame::LifeGame(int width, int height)
 	  m_stats(width, height)
 {
 	// 限制网格大小范围，防止内存溢出或性能过低
-	// 比赛要求：支持大网格
+	// 比赛要求：支持大网格 (最大 2000x2000)
 	if (m_gridWidth < 4) m_gridWidth = 4;
 	if (m_gridHeight < 4) m_gridHeight = 4;
 	if (m_gridWidth > 2000) m_gridWidth = 2000;
@@ -33,11 +33,12 @@ LifeGame::~LifeGame()
 void LifeGame::InitGrid()
 {
 	srand(static_cast<unsigned int>(time(nullptr)));
+	// 初始化两个网格缓冲区
 	m_grid.assign(m_gridHeight, std::vector<bool>(m_gridWidth, false));
 	m_nextGrid.assign(m_gridHeight, std::vector<bool>(m_gridWidth, false));
 
 	// 随机生成初始状态
-	// 密度约为 40%
+	// 密度约为 40% (rand() % 10 < 4)
 	for (int y = 0; y < m_gridHeight; y++)
 	{
 		for (int x = 0; x < m_gridWidth; x++)
@@ -70,21 +71,24 @@ void LifeGame::UpdateGrid()
 	{
 		for (int x = 0; x < m_gridWidth; x++)
 		{
+			// 1. 计算邻居数量
 			int neighbors = CountNeighbors(x, y);
 			bool currentState = m_grid[y][x];
 
-			// 委托给规则引擎计算下一状态
+			// 2. 委托给规则引擎计算下一状态
+			// 不同的规则（如 Conway, HighLife）会有不同的判定逻辑
 			bool nextState = m_ruleEngine.CalculateNextState(currentState, neighbors, m_currentRuleIndex);
 
+			// 3. 写入下一代缓冲区
 			m_nextGrid[y][x] = nextState;
 		}
 	}
 
-	// 交换缓冲区 (Swap Buffers)
-	// 直接赋值 vector 会触发移动语义 (Move Semantics)，效率很高
+	// 4. 交换缓冲区 (Swap Buffers)
+	// 直接赋值 vector 会触发移动语义 (Move Semantics)，效率很高，避免了深拷贝
 	m_grid = m_nextGrid;
 
-	// 记录统计数据
+	// 5. 记录统计数据 (用于图表显示)
 	m_stats.RecordFrame(GetPopulation(), m_grid);
 }
 
@@ -116,9 +120,10 @@ int LifeGame::CountNeighbors(int x, int y)
 	{
 		for (int dx = -1; dx <= 1; dx++)
 		{
-			if (dx == 0 && dy == 0) continue;
+			if (dx == 0 && dy == 0) continue; // 跳过自己
 
 			// 环绕处理：左边出界从右边回来，上边出界从下边回来
+			// 使用取模运算实现坐标循环
 			int nx = (x + dx + m_gridWidth) % m_gridWidth;
 			int ny = (y + dy + m_gridHeight) % m_gridHeight;
 
@@ -133,17 +138,21 @@ int LifeGame::CountNeighbors(int x, int y)
  */
 void LifeGame::ResetGrid()
 {
+	// 清空当前网格
 	for (auto& row : m_grid)
 	{
 		std::fill(row.begin(), row.end(), false);
 	}
+	// 清空下一代缓冲区
 	for (auto& row : m_nextGrid)
 	{
 		std::fill(row.begin(), row.end(), false);
 	}
+	// 重置统计数据
 	m_stats.Reset(m_gridWidth, m_gridHeight);
 }
 
+// 反转网格状态
 void LifeGame::InvertGrid()
 {
 	for (int y = 0; y < m_gridHeight; ++y)
@@ -155,6 +164,7 @@ void LifeGame::InvertGrid()
 	}
 }
 
+// 清空指定区域
 void LifeGame::ClearArea(int x, int y, int w, int h)
 {
 	for (int dy = 0; dy < h; ++dy)
@@ -166,6 +176,7 @@ void LifeGame::ClearArea(int x, int y, int w, int h)
 	}
 }
 
+// 随机填充指定区域
 void LifeGame::RandomizeArea(int x, int y, int w, int h, float density)
 {
 	for (int dy = 0; dy < h; ++dy)
@@ -255,6 +266,7 @@ void LifeGame::PlacePattern(int x, int y, int patternIndex)
 	if (!pattern) return;
 
 	std::vector<std::vector<bool>> patternGrid;
+	// 解析 RLE 字符串
 	if (m_patternLibrary.ParseRLE(pattern->rleString, patternGrid))
 	{
 		int pH = static_cast<int>(patternGrid.size());

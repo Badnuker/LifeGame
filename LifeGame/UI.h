@@ -24,10 +24,11 @@ public:
 
 	// 鼠标交互
 	bool HandleMouseClick(int x, int y, bool leftButton, LifeGame& game,
-	                      int clientWidth, int clientHeight);
+	                      int clientWidth, int clientHeight, Renderer* pRenderer = nullptr);
 	bool HandleMouseMove(int x, int y, LifeGame& game,
-	                     int clientWidth, int clientHeight);
-	void HandleMouseUp(bool leftButton);
+	                     int clientWidth, int clientHeight, Renderer* pRenderer = nullptr);
+	void HandleMouseUp(bool leftButton, Renderer* pRenderer = nullptr);
+	void HandleMouseLeave(Renderer* pRenderer); // 新增：处理鼠标离开事件
 
 	// 状态查询
 	bool IsDragging() const { return m_isDragging || m_isRightDragging; }
@@ -51,6 +52,8 @@ private:
 	HWND m_hSettingsBtn; // 新增：设置按钮
 	HWND m_hHelpBtn; // 新增：帮助按钮
 	HWND m_hUndoBtn; // 新增：撤销按钮
+	HWND m_hEraserBtn; // 新增：橡皮擦按钮
+	HWND m_hMoveBtn; // 新增：移动按钮
 	HWND m_hToolTip;
 
 	FileManager m_fileManager; // 新增：文件管理器实例
@@ -65,8 +68,15 @@ private:
 	// 交互状态
 	bool m_isDragging;
 	bool m_isRightDragging;
+	bool m_isPanning; // 新增：平移状态
 	bool m_dragValue;
 	bool m_applyHover;
+	bool m_isEraserMode;
+	bool m_isMoveMode; // 新增：移动模式
+	int m_lastGridX;
+	int m_lastGridY;
+	int m_lastMouseX; // 新增：上一次鼠标屏幕坐标X
+	int m_lastMouseY; // 新增：上一次鼠标屏幕坐标Y
 
 	// 静态回调函数
 	static LRESULT CALLBACK RowsEditProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp);

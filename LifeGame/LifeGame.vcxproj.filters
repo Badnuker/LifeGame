@@ -60,6 +60,9 @@
     <ClCompile Include="Statistics.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="SplashWindow.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Resource.h">
@@ -111,6 +114,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="Statistics.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SplashWindow.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

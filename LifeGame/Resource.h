@@ -12,3 +12,5 @@
 #define ID_SETTINGS_BTN 1010
 #define ID_HELP_BTN     1011
 #define ID_UNDO_BTN     1012
+#define ID_ERASER_BTN   1013
+#define ID_MOVE_BTN     1014
