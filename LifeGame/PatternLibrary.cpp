@@ -142,7 +142,7 @@ bool PatternLibrary::ParseRLE(const std::string& rle, std::vector<std::vector<bo
  */
 void PatternLibrary::InitBuiltinPatterns()
 {
-	// 0. 单点绘制 (Single Cell) - 特殊占位符
+	// 单点绘制 (Single Cell) - 特殊占位符
 	m_patterns.push_back({
 		L"单点绘制",
 		L"点击网格绘制单个细胞。",
@@ -150,6 +150,63 @@ void PatternLibrary::InitBuiltinPatterns()
 		0, 0
 	});
 
+	// 信号灯
+	m_patterns.push_back({
+		L"信号灯",
+		L"周期=2轮",
+		"3o!",
+		3, 1
+	});
+
+	// 蟾蜍
+	m_patterns.push_back({
+		L"蟾蜍",
+		L"周期=2轮",
+		"b3o$3ob!",
+		4, 2
+	});
+
+	// 红绿灯
+	m_patterns.push_back({
+		L"红绿灯",
+		L"周期=2轮",
+		"2b3o2b$7b$o5bo$o5bo$o5bo$7b$2b3o2b!",
+		7, 7
+	});
+
+	// 脉冲星
+	m_patterns.push_back({
+		L"脉冲星",
+		L"周期=3轮",
+		"2b3o3b3o2b$13b$o4bobo4bo$o4bobo4bo$o4bobo4bo$2b3o3b3o2b$13b$2b3o3b3o2b$o4bobo4bo$o4bobo4bo$o4bobo4bo$13b$2b3o3b3o2b!",
+		13, 13
+	});
+
+	// 慨影
+	m_patterns.push_back({
+		L"慨影",
+		L"周期=15轮",
+		"3o$obo$3o$3o$3o$3o$obo$3o!",
+		3, 8
+	});
+
+	// 滑翔机
+	m_patterns.push_back({
+		L"滑翔机",
+		L"4轮",
+		"bob$2bo$3o!",
+		3, 3
+	});
+
+	// 太空船
+	m_patterns.push_back({
+		L"太空船",
+		L"4轮",
+		"2b2o3b$o4bob$6bo$o5bo$b6o!",
+		7, 5
+	});
+
+	/*
 	// 1. 滑翔机 (Glider)
 	// 最基本的移动飞船
 	m_patterns.push_back({
@@ -370,4 +427,5 @@ void PatternLibrary::InitBuiltinPatterns()
 		"",
 		0, 0
 	});
+	*/
 }
