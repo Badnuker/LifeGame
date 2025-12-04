@@ -131,9 +131,9 @@ private:
 	void UpdateVisualGrid(const LifeGame& game); ///< 更新亮度网格，计算衰减
 
 	// 视图状态 (View State)
-	float m_scale;       ///< 当前缩放比例
-	int m_viewOffsetX;   ///< 视图 X 偏移
-	int m_viewOffsetY;   ///< 视图 Y 偏移
+	float m_scale; ///< 当前缩放比例
+	int m_viewOffsetX; ///< 视图 X 偏移
+	int m_viewOffsetY; ///< 视图 Y 偏移
 
 	// GDI 资源句柄 (GDI Resources)
 	HBRUSH m_hBackgroundBrush;

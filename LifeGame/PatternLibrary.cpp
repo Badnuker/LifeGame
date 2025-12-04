@@ -164,8 +164,8 @@ void PatternLibrary::InitBuiltinPatterns()
 	m_patterns.push_back({
 		L"轻型飞船 (LWSS)",
 		L"Lightweight spaceship，正交移动。",
-		"bo2bo$o4bo$o3bo$o4b$2b2o!",
-		5, 5
+		"o2bob$4bo$o3bo$b4o!",
+		5, 4
 	});
 
 	// 3. 脉冲星 (Pulsar)

@@ -153,13 +153,13 @@ private:
 	// 成员变量 (Member Variables)
 	// ==========================================
 
-	std::unique_ptr<LifeGame> m_game;     ///< 游戏核心逻辑对象 (Model)
+	std::unique_ptr<LifeGame> m_game; ///< 游戏核心逻辑对象 (Model)
 	std::unique_ptr<Renderer> m_renderer; ///< 渲染器对象 (View)
-	std::unique_ptr<UI> m_ui;             ///< 用户界面控制器对象 (Controller)
+	std::unique_ptr<UI> m_ui; ///< 用户界面控制器对象 (Controller)
 
-	bool m_showResetTip;      ///< 标志位：是否正在显示"已重置"的提示信息
-	UINT_PTR m_timerId;       ///< 游戏主循环定时器 ID (用于控制演化速度)
-	UINT_PTR m_tipTimerId;    ///< 提示信息自动消失定时器 ID
-	int m_clientWidth;        ///< 当前窗口客户区的宽度
-	int m_clientHeight;       ///< 当前窗口客户区的高度
+	bool m_showResetTip; ///< 标志位：是否正在显示"已重置"的提示信息
+	UINT_PTR m_timerId; ///< 游戏主循环定时器 ID (用于控制演化速度)
+	UINT_PTR m_tipTimerId; ///< 提示信息自动消失定时器 ID
+	int m_clientWidth; ///< 当前窗口客户区的宽度
+	int m_clientHeight; ///< 当前窗口客户区的高度
 };

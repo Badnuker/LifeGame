@@ -10,7 +10,7 @@
  */
 struct HelpPage
 {
-	std::wstring title;   ///< 页面标题 (显示在左侧列表)
+	std::wstring title; ///< 页面标题 (显示在左侧列表)
 	std::wstring content; ///< 页面正文内容 (显示在右侧区域)
 };
 
@@ -44,9 +44,9 @@ private:
 	static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp);
 
 	// 消息处理函数
-	void OnCreate(HWND hWnd);      ///< 处理窗口创建消息 (WM_CREATE)
-	void OnPaint(HWND hWnd);       ///< 处理绘图消息 (WM_PAINT)
-	void OnSize(HWND hWnd);        ///< 处理窗口大小改变消息 (WM_SIZE)
+	void OnCreate(HWND hWnd); ///< 处理窗口创建消息 (WM_CREATE)
+	void OnPaint(HWND hWnd); ///< 处理绘图消息 (WM_PAINT)
+	void OnSize(HWND hWnd); ///< 处理窗口大小改变消息 (WM_SIZE)
 	void OnCommand(HWND hWnd, int id, int code); ///< 处理命令消息 (WM_COMMAND)
 
 	/**
@@ -64,16 +64,16 @@ private:
 	 */
 	void UpdateFonts(); // 更新字体
 
-	HWND m_hWnd;        ///< 帮助窗口句柄
-	HWND m_hList;       ///< 左侧导航列表框句柄
-	HWND m_hZoomInBtn;  ///< 放大按钮句柄
+	HWND m_hWnd; ///< 帮助窗口句柄
+	HWND m_hList; ///< 左侧导航列表框句柄
+	HWND m_hZoomInBtn; ///< 放大按钮句柄
 	HWND m_hZoomOutBtn; ///< 缩小按钮句柄
-	
-	int m_currentPage;  ///< 当前选中的页面索引
-	float m_fontScale;  ///< 字体缩放比例 (默认 1.0)
+
+	int m_currentPage; ///< 当前选中的页面索引
+	float m_fontScale; ///< 字体缩放比例 (默认 1.0)
 
 	std::vector<HelpPage> m_pages; ///< 帮助页面数据集合
 
 	HFONT m_hTitleFont; ///< 标题字体句柄
-	HFONT m_hBodyFont;  ///< 正文字体句柄
+	HFONT m_hBodyFont; ///< 正文字体句柄
 };

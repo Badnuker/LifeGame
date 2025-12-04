@@ -45,7 +45,7 @@ void SplashWindow::Show(HINSTANCE hInstance, int mode)
 	wc.hInstance = hInstance;
 	wc.lpszClassName = TEXT("LifeGameSplash");
 	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-	wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
+	wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
 	RegisterClass(&wc);
 
 	// 获取屏幕尺寸
@@ -157,18 +157,18 @@ void SplashWindow::InitStars(int width, int height)
 	{
 		Star s;
 		// 随机分布在 -width 到 width 之间
-		s.x = (float)(rand() % (width * 2) - width);
-		s.y = (float)(rand() % (height * 2) - height);
-		s.z = (float)(rand() % 2000 + 1); // 深度
-		s.speed = (float)(rand() % 20 + 10); // 提高基础速度
+		s.x = static_cast<float>(rand() % (width * 2) - width);
+		s.y = static_cast<float>(rand() % (height * 2) - height);
+		s.z = static_cast<float>(rand() % 2000 + 1); // 深度
+		s.speed = static_cast<float>(rand() % 20 + 10); // 提高基础速度
 		s.size = rand() % 6 + 3; // 增大星星尺寸 (3-8)
-		
+
 		// 随机颜色 (增加一些变化)
 		int type = rand() % 10;
 		if (type < 6) s.color = RGB(200, 240, 255); // 蓝白
 		else if (type < 9) s.color = RGB(255, 255, 255); // 纯白
 		else s.color = RGB(200, 100, 255); // 紫色点缀
-		
+
 		m_stars.push_back(s);
 	}
 }
@@ -189,8 +189,8 @@ void SplashWindow::UpdateStars()
 	}
 
 	// 计算全局透明度/亮度
-	float progress = (float)m_frame / m_maxFrames;
-	
+	float progress = static_cast<float>(m_frame) / m_maxFrames;
+
 	if (m_mode == 0) // Startup
 	{
 		// 开机：背景一直保持，文字慢慢浮现
@@ -225,21 +225,21 @@ void SplashWindow::UpdateStars()
 
 			// 前进 (Warp)
 			s.z -= s.speed * (1.0f + progress * 2.0f); // 慢慢加速
-			
+
 			// 循环
 			if (s.z <= 1.0f)
 			{
 				s.z = 2000.0f;
 				// 重置位置，防止中心空洞
-				s.x = (float)(rand() % (m_width * 2) - m_width);
-				s.y = (float)(rand() % (m_height * 2) - m_height);
+				s.x = static_cast<float>(rand() % (m_width * 2) - m_width);
+				s.y = static_cast<float>(rand() % (m_height * 2) - m_height);
 			}
 		}
 	}
 	else // 关机：原来的 Warp Speed，但反向或者加速离去？
 	{
 		// 保持原来的加速离去效果，配合变暗
-		float speedMult = 3.0f + progress * 5.0f; 
+		float speedMult = 3.0f + progress * 5.0f;
 
 		for (auto& s : m_stars)
 		{
@@ -247,8 +247,8 @@ void SplashWindow::UpdateStars()
 			if (s.z <= 1.0f)
 			{
 				s.z = 2000.0f;
-				s.x = (float)(rand() % (m_width * 2) - m_width);
-				s.y = (float)(rand() % (m_height * 2) - m_height);
+				s.x = static_cast<float>(rand() % (m_width * 2) - m_width);
+				s.y = static_cast<float>(rand() % (m_height * 2) - m_height);
 			}
 		}
 	}
@@ -273,7 +273,7 @@ void SplashWindow::OnPaint(HWND hWnd)
 	// 双缓冲
 	HDC memDC = CreateCompatibleDC(hdc);
 	HBITMAP hbm = CreateCompatibleBitmap(hdc, m_width, m_height);
-	HBITMAP hOldBmp = (HBITMAP)SelectObject(memDC, hbm);
+	auto hOldBmp = static_cast<HBITMAP>(SelectObject(memDC, hbm));
 
 	// 1. 绘制背景 (深空黑)
 	RECT r = {0, 0, m_width, m_height};
@@ -286,7 +286,7 @@ void SplashWindow::OnPaint(HWND hWnd)
 
 	// 3. 绘制文字
 	SetBkMode(memDC, TRANSPARENT);
-	
+
 	// 根据 m_alpha 计算文字颜色
 	// 开机时：文字独立淡入 + 上浮效果
 	float textAlpha = m_alpha;
@@ -294,8 +294,8 @@ void SplashWindow::OnPaint(HWND hWnd)
 
 	if (m_mode == 0)
 	{
-		float progress = (float)m_frame / m_maxFrames;
-		
+		float progress = static_cast<float>(m_frame) / m_maxFrames;
+
 		// 0.0 - 0.15: 等待
 		// 0.15 - 0.65: 淡入 + 上浮
 		if (progress < 0.15f)
@@ -308,21 +308,21 @@ void SplashWindow::OnPaint(HWND hWnd)
 			float t = (progress - 0.15f) / 0.5f;
 			textAlpha = t;
 			// EaseOutSine: sin(t * PI / 2)
-			yOffset = (int)(60 * (1.0f - sin(t * 1.570796f))); 
+			yOffset = static_cast<int>(60 * (1.0f - sin(t * 1.570796f)));
 		}
 		else
 		{
 			textAlpha = 1.0f;
 			yOffset = 0;
 		}
-		
+
 		// 最后淡出
 		if (progress > 0.9f) textAlpha = 1.0f - (progress - 0.9f) / 0.1f;
 	}
 
-	int brightness = (int)(255 * textAlpha);
+	int brightness = static_cast<int>(255 * textAlpha);
 	COLORREF textColor = RGB(brightness, brightness, brightness);
-	COLORREF subColor = RGB(0, (int)(brightness * 0.9), brightness); // 冷色系 (青蓝色)
+	COLORREF subColor = RGB(0, static_cast<int>(brightness * 0.9), brightness); // 冷色系 (青蓝色)
 
 	// 2.5 绘制 LOGO (滑翔机)
 	// 放在标题上方
@@ -336,13 +336,16 @@ void SplashWindow::OnPaint(HWND hWnd)
 
 		// 使用文字颜色作为 LOGO 颜色
 		HBRUSH hLogoBrush = CreateSolidBrush(textColor);
-		
+
 		// 滑翔机图案 (3x3)
 		// . * .
 		// . . *
 		// * * *
-		struct Point { int x, y; };
-		Point glider[] = { {1, 0}, {2, 1}, {0, 2}, {1, 2}, {2, 2} };
+		struct Point
+		{
+			int x, y;
+		};
+		Point glider[] = {{1, 0}, {2, 1}, {0, 2}, {1, 2}, {2, 2}};
 
 		for (const auto& p : glider)
 		{
@@ -360,10 +363,10 @@ void SplashWindow::OnPaint(HWND hWnd)
 	// 标题
 	SelectObject(memDC, m_hTitleFont);
 	SetTextColor(memDC, textColor);
-	
+
 	RECT titleRect = {0, m_height / 2 - 60 + yOffset, m_width, m_height / 2 + 40 + yOffset};
 	const TCHAR* title = (m_mode == 0) ? TEXT("LIFE GAME") : TEXT("SYSTEM HALTED");
-	
+
 	// 简单的发光效果 (绘制多次微小偏移)
 	if (textAlpha > 0.5f)
 	{
@@ -372,14 +375,14 @@ void SplashWindow::OnPaint(HWND hWnd)
 		OffsetRect(&glowRect, 2, 2);
 		DrawText(memDC, title, -1, &glowRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 	}
-	
+
 	SetTextColor(memDC, textColor);
 	DrawText(memDC, title, -1, &titleRect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
 	// 副标题 / 版本号
 	SelectObject(memDC, m_hSubFont);
 	SetTextColor(memDC, subColor);
-	
+
 	RECT subRect = {0, m_height / 2 + 50 + yOffset, m_width, m_height / 2 + 150 + yOffset};
 	TCHAR subText[64];
 	if (m_mode == 0)
@@ -396,18 +399,18 @@ void SplashWindow::OnPaint(HWND hWnd)
 		int barH = 4;
 		int barX = (m_width - barW) / 2;
 		int barY = m_height / 2 + 160 + yOffset;
-		
+
 		// 槽
 		RECT slot = {barX, barY, barX + barW, barY + barH};
 		HBRUSH hSlot = CreateSolidBrush(RGB(30, 30, 30));
 		FillRect(memDC, &slot, hSlot);
 		DeleteObject(hSlot);
-		
+
 		// 进度
-		float progress = (float)m_frame / (m_maxFrames * 0.8f); // 提前一点满
+		float progress = static_cast<float>(m_frame) / (m_maxFrames * 0.8f); // 提前一点满
 		if (progress > 1.0f) progress = 1.0f;
-		
-		RECT fill = {barX, barY, barX + (int)(barW * progress), barY + barH};
+
+		RECT fill = {barX, barY, barX + static_cast<int>(barW * progress), barY + barH};
 		HBRUSH hFill = CreateSolidBrush(RGB(0, 200, 255));
 		FillRect(memDC, &fill, hFill);
 		DeleteObject(hFill);
@@ -433,37 +436,37 @@ void SplashWindow::DrawStars(HDC hdc, int width, int height)
 	int cy = height / 2;
 
 	// 使用 DC Pen 提高绘图效率 (Win2000+)
-	HPEN hOldPen = (HPEN)SelectObject(hdc, GetStockObject(DC_PEN));
+	auto hOldPen = static_cast<HPEN>(SelectObject(hdc, GetStockObject(DC_PEN)));
 
 	for (const auto& s : m_stars)
 	{
 		// 3D 投影
 		if (s.z <= 0) continue;
-		
+
 		float k = 500.0f / s.z; // 增大视场角 (FOV)
-		int px = cx + (int)(s.x * k);
-		int py = cy + (int)(s.y * k);
+		int px = cx + static_cast<int>(s.x * k);
+		int py = cy + static_cast<int>(s.y * k);
 
 		if (px >= -100 && px < width + 100 && py >= -100 && py < height + 100)
 		{
 			// 亮度随距离衰减
-			int alpha = (int)(255 * (1.0f - s.z / 2000.0f));
+			int alpha = static_cast<int>(255 * (1.0f - s.z / 2000.0f));
 			if (alpha < 0) alpha = 0;
-			
+
 			// 结合全局 alpha
-			alpha = (int)(alpha * m_alpha);
-			
+			alpha = static_cast<int>(alpha * m_alpha);
+
 			COLORREF c = s.color;
 			// 简单的颜色混合 (假设背景是深色的)
 			int r = (GetRValue(c) * alpha) / 255;
 			int g = (GetGValue(c) * alpha) / 255;
 			int b = (GetBValue(c) * alpha) / 255;
-			
+
 			// 绘制拖尾 (Warp Speed 效果)
 			// 计算"尾巴"的位置 (更远处的投影)
 			// 速度越快，尾巴越长
 			float speedMult = (m_mode == 0) ? 1.0f : 3.0f;
-			float progress = (float)m_frame / m_maxFrames;
+			float progress = static_cast<float>(m_frame) / m_maxFrames;
 			if (m_mode == 0 && progress > 0.8f) speedMult = 8.0f; // 冲刺时更夸张
 
 			// 只有当速度足够快时才画线
@@ -471,12 +474,12 @@ void SplashWindow::DrawStars(HDC hdc, int width, int height)
 			{
 				float tailZ = s.z + s.speed * speedMult * 1.5f; // 尾巴在更深处
 				float tailK = 500.0f / tailZ;
-				int tx = cx + (int)(s.x * tailK);
-				int ty = cy + (int)(s.y * tailK);
+				int tx = cx + static_cast<int>(s.x * tailK);
+				int ty = cy + static_cast<int>(s.y * tailK);
 
 				// 使用画笔画粗线
 				HPEN hPen = CreatePen(PS_SOLID, s.size / 2, RGB(r, g, b));
-				HPEN hOld = (HPEN)SelectObject(hdc, hPen);
+				auto hOld = static_cast<HPEN>(SelectObject(hdc, hPen));
 				MoveToEx(hdc, px, py, nullptr);
 				LineTo(hdc, tx, ty);
 				SelectObject(hdc, hOld);
@@ -486,12 +489,12 @@ void SplashWindow::DrawStars(HDC hdc, int width, int height)
 			{
 				// 绘制实心圆点，而不是单个像素
 				HBRUSH hBrush = CreateSolidBrush(RGB(r, g, b));
-				HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, hBrush);
-				
+				auto hOldBrush = static_cast<HBRUSH>(SelectObject(hdc, hBrush));
+
 				// 根据 size 绘制圆
 				int rSize = s.size;
-				Ellipse(hdc, px - rSize/2, py - rSize/2, px + rSize/2, py + rSize/2);
-				
+				Ellipse(hdc, px - rSize / 2, py - rSize / 2, px + rSize / 2, py + rSize / 2);
+
 				SelectObject(hdc, hOldBrush);
 				DeleteObject(hBrush);
 

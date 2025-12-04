@@ -492,25 +492,25 @@ void UI::HandleCommand(int id, int code, HWND hWnd, LifeGame& game, Renderer* pR
 		{
 			w = 40;
 			h = 30;
-		} 
+		}
 		else if (sel == 1) // 中 (120x160)
 		{
 			w = 160;
 			h = 120;
-		} 
+		}
 		else if (sel == 2) // 小 (300x400)
 		{
 			w = 400;
 			h = 300;
-		} 
+		}
 		else if (sel == 3) // 无限 (2000x2000)
 		{
 			w = 2000;
 			h = 2000;
-		} 
+		}
 
 		game.ResizeGrid(w, h);
-		if (pRenderer) 
+		if (pRenderer)
 		{
 			pRenderer->ClearVisuals();
 			// 重置视图位置和缩放
@@ -664,7 +664,7 @@ void UI::HandleCommand(int id, int code, HWND hWnd, LifeGame& game, Renderer* pR
 	{
 		m_isEraserMode = !m_isEraserMode;
 		SetWindowText(m_hEraserBtn, m_isEraserMode ? TEXT("橡皮擦: ON") : TEXT("橡皮擦: OFF"));
-		
+
 		// 互斥：如果开启橡皮擦，关闭移动模式
 		if (m_isEraserMode && m_isMoveMode)
 		{
@@ -872,7 +872,7 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
 		{
 			m_lastGridX = hoverX;
 			m_lastGridY = hoverY;
-			
+
 			int sel = static_cast<int>(SendMessage(m_hPatternCombo, CB_GETCURSEL, 0, 0));
 			bool showEraser = m_isEraserMode || m_isRightDragging;
 			pRenderer->SetPreview(hoverX, hoverY, sel, showEraser);
@@ -880,7 +880,7 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
 		}
 	}
 
-	if (!m_isDragging && !m_isRightDragging) 
+	if (!m_isDragging && !m_isRightDragging)
 	{
 		// 如果预览状态改变了（包括移出网格导致变为-1），返回 true 以触发重绘
 		return previewChanged;
@@ -899,7 +899,7 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
 				bool target = m_dragValue; // 使用记录的拖拽值
 				// 如果是橡皮擦模式，左键拖拽也是擦除 (target=false)
 				if (m_isEraserMode) target = false;
-				
+
 				bool oldState = game.GetCell(cellX, cellY);
 				if (oldState != target)
 				{
@@ -910,7 +910,7 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
 			}
 		}
 	}
-	
+
 	// 4. 处理右键擦除拖拽
 	if (m_isRightDragging)
 	{
@@ -927,7 +927,7 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
 					std::unique_ptr<Command> cmd(new SetCellCommand(cellX, cellY, false, oldState));
 					game.GetCommandHistory().ExecuteCommand(std::move(cmd), game);
 				}
-				
+
 				// 立即更新预览为橡皮擦
 				if (pRenderer)
 				{
@@ -950,12 +950,12 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
  */
 void UI::HandleMouseUp(bool leftButton, Renderer* pRenderer)
 {
-	if (leftButton) 
+	if (leftButton)
 	{
 		m_isDragging = false;
 		m_isPanning = false; // 结束平移
 	}
-	else 
+	else
 	{
 		m_isRightDragging = false;
 	}

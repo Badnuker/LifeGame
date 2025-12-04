@@ -30,8 +30,8 @@ public:
 	void Undo(LifeGame& game) override;
 
 private:
-	int m_x;            ///< 细胞 X 坐标
-	int m_y;            ///< 细胞 Y 坐标
-	bool m_newState;    ///< 新状态
-	bool m_oldState;    ///< 旧状态
+	int m_x; ///< 细胞 X 坐标
+	int m_y; ///< 细胞 Y 坐标
+	bool m_newState; ///< 新状态
+	bool m_oldState; ///< 旧状态
 };

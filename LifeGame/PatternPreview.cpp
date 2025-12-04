@@ -39,7 +39,7 @@ bool PatternPreview::Initialize(HINSTANCE hInstance, HWND hParent, int x, int y,
 	                        hParent, nullptr, hInstance, this);
 
 	// 创建绘图资源
-	m_hBgBrush = CreateSolidBrush(RGB(30, 34, 40));   // 深灰背景
+	m_hBgBrush = CreateSolidBrush(RGB(30, 34, 40)); // 深灰背景
 	m_hCellBrush = CreateSolidBrush(RGB(0, 255, 255)); // 青色细胞
 
 	return (m_hWnd != nullptr);

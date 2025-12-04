@@ -12,15 +12,15 @@
  * 此时尚未创建 GDI 资源，资源创建在 Initialize 中进行。
  */
 Renderer::Renderer()
-	: m_visualW(0), m_visualH(0), m_hBackgroundBrush(nullptr),
-	  m_hAliveBrush(nullptr), m_hGlowBrush(nullptr), m_hDeadBrush(nullptr),
-	  m_hTipBrush(nullptr), m_hLeftPanelBrush(nullptr), m_hInputBgBrush(nullptr), m_hGridPen(nullptr),
-	  m_hBorderPen(nullptr), m_hHUDPen(nullptr), m_hTitleFont(nullptr), m_hTipFont(nullptr),
-	  m_hBtnFont(nullptr), m_hControlFont(nullptr), m_hLeftKeyFont(nullptr), m_hLeftDescFont(nullptr),
-	  m_hBrandingFont(nullptr), m_hDataFont(nullptr),
-	  m_previewX(-1), m_previewY(-1), m_previewPatternIndex(-1), m_isEraserPreview(false),
-	  m_hPreviewBrush(nullptr), m_hEraserPen(nullptr),
-	  m_scale(1.0f), m_viewOffsetX(0), m_viewOffsetY(0)
+	: m_visualW(0), m_visualH(0), m_scale(1.0f),
+	  m_viewOffsetX(0), m_viewOffsetY(0), m_hBackgroundBrush(nullptr),
+	  m_hAliveBrush(nullptr), m_hGlowBrush(nullptr), m_hDeadBrush(nullptr), m_hTipBrush(nullptr),
+	  m_hLeftPanelBrush(nullptr), m_hInputBgBrush(nullptr), m_hGridPen(nullptr), m_hBorderPen(nullptr),
+	  m_hHUDPen(nullptr), m_hTitleFont(nullptr), m_hTipFont(nullptr), m_hBtnFont(nullptr),
+	  m_hControlFont(nullptr), m_hLeftKeyFont(nullptr),
+	  m_hLeftDescFont(nullptr), m_hBrandingFont(nullptr), m_hDataFont(nullptr), m_previewX(-1),
+	  m_previewY(-1), m_previewPatternIndex(-1),
+	  m_isEraserPreview(false), m_hPreviewBrush(nullptr), m_hEraserPen(nullptr)
 {
 	// 赛博朋克配色方案
 	m_colText = RGB(220, 240, 255); // 亮白蓝
@@ -283,32 +283,32 @@ void Renderer::Zoom(float factor, int centerX, int centerY)
 	// 屏幕坐标 = 偏移 + 网格坐标 * 缩放
 	// 保持鼠标下的网格坐标不变
 	// (centerX - offX) / oldScale = (centerX - newOffX) / newScale
-	
+
 	// 这里的 centerX, centerY 是相对于窗口客户区的
 	// 我们需要先计算当前的 offX, offY (不含 viewOffset)
 	// 但 viewOffset 是我们要调整的
-	
+
 	// 简化模型：
 	// WorldX = (ScreenX - ViewOffsetX - BaseOffsetX) / Scale
 	// 我们希望 WorldX 在缩放前后保持一致
 	// (ScreenX - OldViewOffset - Base) / OldScale = (ScreenX - NewViewOffset - Base) / NewScale
-	
+
 	// 设 K = (ScreenX - OldViewOffset - Base) / OldScale
 	// NewViewOffset = ScreenX - Base - K * NewScale
 	// NewViewOffset = ScreenX - Base - (ScreenX - OldViewOffset - Base) * (NewScale / OldScale)
-	
+
 	// 但 BaseOffsetX 是动态计算的 (居中)，这会很复杂。
 	// 简单起见，我们假设 BaseOffsetX 是固定的或者我们只调整 ViewOffset
 	// 实际上 CalcLayout 会重新计算 BaseOffsetX。
 	// 如果我们想平滑缩放，最好让 BaseOffsetX 在缩放时不跳变，或者我们把 BaseOffsetX 视为 0，全靠 ViewOffset。
 	// 但目前的 CalcLayout 是自动居中的。
-	
+
 	// 让我们采用简单策略：直接缩放，然后调整 ViewOffset 以保持中心点
 	// 实际上，由于 CalcLayout 的存在，缩放会自动改变网格大小，从而改变居中位置。
 	// 如果我们只改变 scale，CalcLayout 会算出新的居中位置。
 	// 这可能导致"以屏幕中心缩放"，而不是以鼠标为中心。
 	// 如果要以鼠标为中心，我们需要补偿 ViewOffset。
-	
+
 	// 暂时只实现简单的缩放，不搞复杂的鼠标中心对齐，或者简单调整 ViewOffset
 	m_scale = newScale;
 }
@@ -394,11 +394,11 @@ void Renderer::DrawPreview(HDC hdc, const LifeGame& game, int cellSize, int offX
 		int left = offX + m_previewX * cellSize;
 		int top = offY + m_previewY * cellSize;
 		RECT r = {left, top, left + cellSize, top + cellSize};
-		
+
 		auto hOldPen = static_cast<HPEN>(SelectObject(hdc, m_hEraserPen));
 		SelectObject(hdc, GetStockObject(NULL_BRUSH));
 		Rectangle(hdc, r.left, r.top, r.right, r.bottom);
-		
+
 		// 画个叉
 		MoveToEx(hdc, r.left, r.top, nullptr);
 		LineTo(hdc, r.right, r.bottom);
@@ -411,7 +411,7 @@ void Renderer::DrawPreview(HDC hdc, const LifeGame& game, int cellSize, int offX
 	{
 		// 绘制图案预览
 		const PatternData* p = game.GetPatternLibrary().GetPattern(m_previewPatternIndex);
-		
+
 		// 如果是单点绘制 (index 0) 或找不到图案，只画一个点
 		if (m_previewPatternIndex <= 0 || !p)
 		{
@@ -431,7 +431,7 @@ void Renderer::DrawPreview(HDC hdc, const LifeGame& game, int cellSize, int offX
 			// 实际上 PatternData 只有 rleString。
 			// 我们这里临时解析一下，或者只画个包围盒？
 			// 为了效果，我们解析。
-			
+
 			// 注意：PatternLibrary::ParseRLE 是成员函数，需要实例。
 			// 我们可以临时创建一个 PatternLibrary 实例？不，太慢。
 			// 我们可以 const_cast 吗？不。
@@ -443,27 +443,27 @@ void Renderer::DrawPreview(HDC hdc, const LifeGame& game, int cellSize, int offX
 			// 让我们假设它是 const 的，或者修改它为 const。
 			// 如果它是非 const，我们就有麻烦了。
 			// 让我们检查 PatternLibrary.h
-			
+
 			// 临时方案：只画一个矩形框表示范围
 			int w = p->width;
 			int h = p->height;
-			
+
 			// 限制范围
-			if (w > 50) w = 50; 
+			if (w > 50) w = 50;
 			if (h > 50) h = 50;
 
 			// 尝试解析 (如果 ParseRLE 是 const 的话)
 			// const_cast<PatternLibrary&>(game.GetPatternLibrary()).ParseRLE(...)
-			
+
 			// 简单起见，我们只画包围盒和中心点
 			int left = offX + m_previewX * cellSize;
 			int top = offY + m_previewY * cellSize;
 			int right = left + w * cellSize;
 			int bottom = top + h * cellSize;
-			
+
 			RECT r = {left, top, right, bottom};
 			FrameRect(hdc, &r, m_hPreviewBrush);
-			
+
 			// 填充左上角表示起始点
 			RECT start = {left, top, left + cellSize, top + cellSize};
 			FillRect(hdc, &start, m_hPreviewBrush);
@@ -494,7 +494,7 @@ void Renderer::CalcLayout(const LifeGame& game, int& outCellSize, int& outOffset
 	// 基础单元格大小 (不缩放时的大小)
 	// 如果是"无限"模式 (比如 > 500)，基础大小设小一点
 	int baseCellSize = BASE_CELL_SIZE;
-	
+
 	// 自动适应模式：如果 scale 为 1.0 (默认)，且网格较小，尝试填满屏幕
 	// 但如果用户手动缩放了，就使用手动缩放
 	// 这里我们改变逻辑：
@@ -503,7 +503,7 @@ void Renderer::CalcLayout(const LifeGame& game, int& outCellSize, int& outOffset
 	int fitCellH = availH / rows;
 	int fitSize = (fitCellW < fitCellH) ? fitCellW : fitCellH;
 	if (fitSize < 1) fitSize = 1;
-	
+
 	// 2. 应用缩放
 	// 如果是初始状态 (scale=1.0)，我们希望对于小网格是"适应屏幕"，对于大网格是"像素级显示"
 	// 但为了统一，我们让 m_scale 乘以 fitSize ? 
@@ -511,7 +511,7 @@ void Renderer::CalcLayout(const LifeGame& game, int& outCellSize, int& outOffset
 	// 最好是：cellSize = base * scale。
 	// 对于大网格，base=12, scale=1 -> 12px。2000个格子就是24000px，很大。
 	// 对于小网格，base=12, scale=1 -> 12px。40个格子就是480px，很小。
-	
+
 	// 修正策略：
 	// 始终以 fitSize 为基准？不，那样大网格会变成 0px。
 	// 采用混合策略：
@@ -521,10 +521,10 @@ void Renderer::CalcLayout(const LifeGame& game, int& outCellSize, int& outOffset
 	// 这样默认(scale=1)就是适应屏幕。
 	// 但是对于 2000x2000，fitSize 会是 0 (availW/2000 < 1)。
 	// 所以必须有最小值。
-	
-	float rawSize = (float)fitSize;
+
+	float rawSize = static_cast<float>(fitSize);
 	if (rawSize < 2.0f) rawSize = 2.0f; // 最小基础大小
-	
+
 	// 如果网格巨大，fitSize 只有 1 或 0。这时候基础大小应该设为比如 10，然后允许用户缩放。
 	if (cols > 500 || rows > 500) rawSize = 10.0f;
 
@@ -568,7 +568,7 @@ void Renderer::DrawGrid(HDC hdc, const LifeGame& game, const RECT* pDirty,
 	// 计算可见的网格索引范围
 	// xpos = offX + xi * cellSize
 	// xi = (xpos - offX) / cellSize
-	
+
 	int startCol = (viewL - offX) / cellSize;
 	int endCol = (viewR - offX) / cellSize + 1;
 	int startRow = (viewT - offY) / cellSize;
@@ -588,7 +588,7 @@ void Renderer::DrawGrid(HDC hdc, const LifeGame& game, const RECT* pDirty,
 	int drawT = max(offY, viewT);
 	int drawR = min(offX + gridWpx, viewR);
 	int drawB = min(offY + gridHpx, viewB);
-	
+
 	if (drawR > drawL && drawB > drawT)
 	{
 		RECT gridRect = {drawL, drawT, drawR, drawB};
@@ -600,7 +600,7 @@ void Renderer::DrawGrid(HDC hdc, const LifeGame& game, const RECT* pDirty,
 	if (settings.showGrid && cellSize >= 4)
 	{
 		auto hOldPen = static_cast<HPEN>(SelectObject(hdc, m_hGridPen));
-		
+
 		// 只绘制可见范围内的线
 		for (int xi = startCol; xi <= endCol; xi++)
 		{
@@ -942,7 +942,7 @@ void Renderer::DrawStatistics(HDC hdc, const LifeGame& game, int x, int y, int w
 	{
 		int val = history[i];
 		int px = x + static_cast<int>(i * stepX);
-		int py = (y + h) - static_cast<int>((float)val / maxPop * (h - 10)) - 5; // 留出边距
+		int py = (y + h) - static_cast<int>(static_cast<float>(val) / maxPop * (h - 10)) - 5; // 留出边距
 		return {px, py};
 	};
 

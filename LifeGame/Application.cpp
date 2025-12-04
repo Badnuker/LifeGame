@@ -37,15 +37,15 @@ int Application::Run(HINSTANCE hInstance, int nCmdShow, LPSTR lpCmdLine)
 
 	// 2. 解析命令行参数
 	// 允许用户通过命令行自定义初始网格大小，默认 160x120
-	int gridWidth = 160; 
+	int gridWidth = 160;
 	int gridHeight = 120;
 	ParseCommandLine(lpCmdLine, gridWidth, gridHeight);
 
 	// 3. 初始化核心子系统
 	// 使用 std::make_unique 创建智能指针，自动管理内存
 	m_game = std::make_unique<LifeGame>(gridWidth, gridHeight); // 游戏逻辑模型
-	m_renderer = std::make_unique<Renderer>();                  // 渲染器
-	m_ui = std::make_unique<UI>();                              // UI 控制器
+	m_renderer = std::make_unique<Renderer>(); // 渲染器
+	m_ui = std::make_unique<UI>(); // UI 控制器
 
 	// 4. 注册窗口类
 	WNDCLASS wc = {0};
@@ -218,7 +218,7 @@ LRESULT Application::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 		{
 			// 隐藏主窗口，避免在关机动画时看到它
 			ShowWindow(hWnd, SW_HIDE);
-			
+
 			// 显示关机画面 (Shutdown Screen)
 			SplashWindow splash;
 			splash.Show(GetModuleHandle(nullptr), 1); // 1 = Shutdown (关机模式)
@@ -271,13 +271,13 @@ void Application::OnTimer(HWND hWnd, WPARAM timerId)
 		if (m_game->IsRunning())
 		{
 			m_game->UpdateGrid(); // 核心逻辑：计算下一代
-			
+
 			// 优化重绘：
 			// 之前只重绘右侧网格，导致左侧统计图不更新。
 			// 现在重绘整个客户区 (r.left = 0)，确保所有动态元素都能实时刷新。
 			RECT r;
 			GetClientRect(hWnd, &r);
-			r.left = 0; 
+			r.left = 0;
 			InvalidateRect(hWnd, &r, FALSE); // FALSE 表示不擦除背景，直接覆盖
 		}
 	}
@@ -331,7 +331,7 @@ void Application::OnMouse(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 	case WM_MOUSEMOVE:
 		// 追踪鼠标离开事件
 		{
-			TRACKMOUSEEVENT tme = { sizeof(TRACKMOUSEEVENT), TME_LEAVE, hWnd, 0 };
+			TRACKMOUSEEVENT tme = {sizeof(TRACKMOUSEEVENT), TME_LEAVE, hWnd, 0};
 			TrackMouseEvent(&tme);
 		}
 		// 鼠标移动：处理拖拽绘制或悬停预览
@@ -356,8 +356,8 @@ void Application::OnMouseWheel(HWND hWnd, WPARAM wParam, LPARAM lParam)
 {
 	int zDelta = GET_WHEEL_DELTA_WPARAM(wParam);
 	POINT pt;
-	pt.x = (short)LOWORD(lParam);
-	pt.y = (short)HIWORD(lParam);
+	pt.x = static_cast<short>(LOWORD(lParam));
+	pt.y = static_cast<short>(HIWORD(lParam));
 	ScreenToClient(hWnd, &pt); // 将屏幕坐标转换为客户区坐标
 
 	if (m_renderer)

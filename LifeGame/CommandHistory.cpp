@@ -23,7 +23,7 @@ void CommandHistory::ExecuteCommand(std::unique_ptr<Command> cmd, LifeGame& game
 {
 	// 1. 执行命令的具体逻辑
 	cmd->Execute(game);
-	
+
 	// 2. 将命令压入撤销栈 (Undo Stack)
 	// 使用 std::move 转移所有权，因为 unique_ptr 不能复制
 	m_undoStack.push_back(std::move(cmd));
@@ -52,7 +52,7 @@ void CommandHistory::Undo(LifeGame& game)
 
 	// 2. 执行该命令的撤销逻辑
 	cmd->Undo(game);
-	
+
 	// 3. 将该命令压入重做栈，以便后续可以重做
 	m_redoStack.push_back(std::move(cmd));
 }
@@ -69,7 +69,7 @@ void CommandHistory::Redo(LifeGame& game)
 
 	// 2. 再次执行该命令
 	cmd->Execute(game);
-	
+
 	// 3. 将该命令放回撤销栈
 	m_undoStack.push_back(std::move(cmd));
 }

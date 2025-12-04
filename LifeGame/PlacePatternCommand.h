@@ -9,9 +9,9 @@
  */
 struct CellState
 {
-	int x;        ///< X坐标
-	int y;        ///< Y坐标
-	bool oldState;///< 旧状态 (true=活, false=死)
+	int x; ///< X坐标
+	int y; ///< Y坐标
+	bool oldState; ///< 旧状态 (true=活, false=死)
 };
 
 /**
@@ -48,8 +48,8 @@ public:
 	void Undo(LifeGame& game) override;
 
 private:
-	int m_x;            ///< 放置位置 X
-	int m_y;            ///< 放置位置 Y
+	int m_x; ///< 放置位置 X
+	int m_y; ///< 放置位置 Y
 	int m_patternIndex; ///< 图案索引
 	std::vector<CellState> m_affectedCells; ///< 存储受影响细胞的旧状态
 };

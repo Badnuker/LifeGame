@@ -12,14 +12,14 @@ struct GameSettings
 	// 颜色设置
 	COLORREF gridColor; ///< 网格线颜色
 	COLORREF cellColor; ///< 活细胞颜色
-	COLORREF bgColor;   ///< 背景颜色
+	COLORREF bgColor; ///< 背景颜色
 	COLORREF textColor; ///< 文本颜色
 
 	// 显示设置
-	bool showGrid;      ///< 是否显示网格线
-	bool showHUD;       ///< 是否显示HUD信息 (如装饰线)
-	bool showHistory;   ///< 是否显示历史统计图表
-	int gridLineWidth;  ///< 网格线宽度 (像素)
+	bool showGrid; ///< 是否显示网格线
+	bool showHUD; ///< 是否显示HUD信息 (如装饰线)
+	bool showHistory; ///< 是否显示历史统计图表
+	int gridLineWidth; ///< 网格线宽度 (像素)
 
 	/**
 	 * @brief 默认构造函数

@@ -74,6 +74,6 @@ private:
 	const PatternData* m_pCurrentPattern; ///< 当前持有的图案数据指针
 	std::vector<std::vector<bool>> m_previewGrid; ///< 解析后的图案网格缓存
 
-	HBRUSH m_hBgBrush;   ///< 背景画刷 (深色)
+	HBRUSH m_hBgBrush; ///< 背景画刷 (深色)
 	HBRUSH m_hCellBrush; ///< 细胞画刷 (亮青色)
 };

@@ -65,7 +65,7 @@ public:
 private:
 	// 撤销栈：存储已执行的命令，用于回滚操作
 	std::vector<std::unique_ptr<Command>> m_undoStack;
-	
+
 	// 重做栈：存储已撤销的命令，用于恢复操作
 	std::vector<std::unique_ptr<Command>> m_redoStack;
 
