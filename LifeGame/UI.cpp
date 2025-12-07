@@ -16,7 +16,7 @@ UI* UI::s_pInstance = nullptr;
  */
 UI::UI()
 	: m_hRowsEdit(nullptr), m_hColsEdit(nullptr), m_hApplyBtn(nullptr),
-	  m_hRowsLabel(nullptr), m_hColsLabel(nullptr), m_hPatternLabel(nullptr), m_hPatternCombo(nullptr),
+	  m_hRowsLabel(nullptr), m_hColsLabel(nullptr), m_hPatternLabel(nullptr), m_hPatternCombo(nullptr), m_hDescLabel(nullptr),
 	  m_hRuleLabel(nullptr), m_hRuleCombo(nullptr), m_hToolTip(nullptr),
 	  m_oldRowsProc(nullptr), m_oldColsProc(nullptr), m_oldApplyBtnProc(nullptr),
 	  m_isDragging(false), m_isRightDragging(false), m_isPanning(false), m_dragValue(true),
@@ -77,6 +77,13 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame& game)
 	m_preview.SetPattern(p);
 
 	leftY += 140 + gapY;
+
+	// 1.6 简介标签 (新增)
+	m_hDescLabel = CreateWindowEx(0, TEXT("STATIC"), p ? p->description.c_str() : TEXT(""),
+	                              WS_CHILD | WS_VISIBLE | SS_LEFT,
+	                              leftX, leftY, editW, 40, hParent,
+	                              nullptr, hInstance, nullptr);
+	leftY += 40 + gapY;
 
 	// 2. 规则选择
 	m_hRuleLabel = CreateWindowEx(0, TEXT("STATIC"), TEXT("演化规则"),
@@ -255,6 +262,8 @@ void UI::SetAllFonts(HFONT hFont)
 		SendMessage(m_hPatternLabel, WM_SETFONT, (WPARAM)hFont, TRUE);
 	if (m_hPatternCombo)
 		SendMessage(m_hPatternCombo, WM_SETFONT, (WPARAM)hFont, TRUE);
+	if (m_hDescLabel)
+		SendMessage(m_hDescLabel, WM_SETFONT, (WPARAM)hFont, TRUE);
 	if (m_hRuleLabel)
 		SendMessage(m_hRuleLabel, WM_SETFONT, (WPARAM)hFont, TRUE);
 	if (m_hRuleCombo)
@@ -319,6 +328,10 @@ void UI::LayoutControls(int clientWidth, int clientHeight)
 	// 1.5 预览
 	m_preview.Move(leftX, leftY, editW, 140);
 	leftY += 140 + gapY;
+
+	// 1.6 简介
+	SetWindowPos(m_hDescLabel, nullptr, leftX, leftY, editW, 40, SWP_NOZORDER);
+	leftY += 40 + gapY;
 
 	// 2. 规则
 	SetWindowPos(m_hRuleLabel, nullptr, leftX, leftY, labelW, editH, SWP_NOZORDER);
@@ -407,6 +420,10 @@ void UI::HandleCommand(int id, int code, HWND hWnd, LifeGame& game, Renderer* pR
 		{
 			const auto* p = game.GetPatternLibrary().GetPattern(sel);
 			m_preview.SetPattern(p);
+			if (m_hDescLabel)
+			{
+				SetWindowText(m_hDescLabel, p ? p->description.c_str() : TEXT(""));
+			}
 		}
 		SetFocus(hWnd); // 自动聚焦回主窗口，方便键盘操作
 	}

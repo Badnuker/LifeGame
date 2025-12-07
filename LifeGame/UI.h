@@ -42,6 +42,7 @@ private:
 	HWND m_hColsLabel;
 	HWND m_hPatternLabel; // 新增
 	HWND m_hPatternCombo; // 新增
+	HWND m_hDescLabel; // 新增：图案简介
 	HWND m_hRuleLabel; // 新增
 	HWND m_hRuleCombo; // 新增
 	HWND m_hSizeLabel; // 新增
