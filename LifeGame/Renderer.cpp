@@ -748,7 +748,7 @@ void Renderer::DrawLeftPanel(HDC hdc, int clientWidth, int clientHeight, const L
         {TEXT("ESC"), L"退出程序"}
     };
 
-    int keyColW = 60;
+    int keyColW = 90; // 增加宽度以完整显示快捷键文字
 
     // 绘制一个小标题 "快捷操作"
     RECT titleR = {panelPaddingX, shortcutStartY, LEFT_PANEL_WIDTH, shortcutStartY + 30};
