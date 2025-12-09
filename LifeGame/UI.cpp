@@ -21,7 +21,7 @@ UI::UI()
       m_hRuleLabel(nullptr), m_hRuleCombo(nullptr), m_hToolTip(nullptr),
       m_oldRowsProc(nullptr), m_oldColsProc(nullptr), m_oldApplyBtnProc(nullptr),
       m_isDragging(false), m_isRightDragging(false), m_isPanning(false), m_dragValue(true),
-      m_applyHover(false), m_isEraserMode(false), m_isMoveMode(false), m_lastGridX(-1), m_lastGridY(-1),
+      m_applyHover(false), m_isEraserMode(false), m_eraserSize(1), m_lastGridX(-1), m_lastGridY(-1),
       m_lastMouseX(0), m_lastMouseY(0) {
     s_pInstance = this;
 }
@@ -151,12 +151,6 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame &game) {
 
     leftY += 40 + gapY;
 
-    // 3.5 移动模式 (新增)
-    m_hMoveBtn = CreateWindowEx(0, TEXT("BUTTON"), TEXT("移动: OFF"),
-                                WS_CHILD | WS_VISIBLE | WS_TABSTOP,
-                                leftX, leftY, editW, 30, hParent,
-                                (HMENU) ID_MOVE_BTN, hInstance, nullptr);
-    leftY += 30 + gapY;
 
     // 4. 文件操作 (新增)
     m_hSaveBtn = CreateWindowEx(0, TEXT("BUTTON"), TEXT("保存存档"),
@@ -294,8 +288,6 @@ void UI::SetAllFonts(HFONT hFont) {
         SendMessage(m_hRowsEdit, WM_SETFONT, (WPARAM) hFont, TRUE);
     if (m_hApplyBtn)
         SendMessage(m_hApplyBtn, WM_SETFONT, (WPARAM) hFont, TRUE);
-    if (m_hMoveBtn)
-        SendMessage(m_hMoveBtn, WM_SETFONT, (WPARAM) hFont, TRUE);
     if (m_hSaveBtn)
         SendMessage(m_hSaveBtn, WM_SETFONT, (WPARAM) hFont, TRUE);
     if (m_hLoadBtn)
@@ -374,9 +366,6 @@ void UI::LayoutControls(int clientWidth, int clientHeight) {
     SetWindowPos(m_hApplyBtn, nullptr, leftX, leftY, editW, 40, SWP_NOZORDER);
 
     leftY += 40 + gapY;
-    SetWindowPos(m_hMoveBtn, nullptr, leftX, leftY, editW, 30, SWP_NOZORDER);
-
-    leftY += 30 + gapY;
     SetWindowPos(m_hSaveBtn, nullptr, leftX, leftY, 105, 30, SWP_NOZORDER);
     SetWindowPos(m_hLoadBtn, nullptr, leftX + 115, leftY, 105, 30, SWP_NOZORDER);
 
@@ -663,12 +652,6 @@ void UI::HandleCommand(int id, int code, HWND hWnd, LifeGame &game, Renderer *pR
     else if (id == ID_ERASER_BTN && code == BN_CLICKED) {
         m_isEraserMode = !m_isEraserMode;
         SetWindowText(m_hEraserBtn, m_isEraserMode ? TEXT("橡皮擦: ON") : TEXT("橡皮擦: OFF"));
-
-        // 互斥：如果开启橡皮擦，关闭移动模式
-        if (m_isEraserMode && m_isMoveMode) {
-            m_isMoveMode = false;
-            SetWindowText(m_hMoveBtn, TEXT("移动: OFF"));
-        }
         SetFocus(hWnd);
     }
     // 12. 橡皮擦大小选择
@@ -690,18 +673,6 @@ void UI::HandleCommand(int id, int code, HWND hWnd, LifeGame &game, Renderer *pR
                 break;
         }
         InvalidateRect(hWnd, nullptr, FALSE);
-        SetFocus(hWnd);
-    }
-    // 12. 移动模式开关
-    else if (id == ID_MOVE_BTN && code == BN_CLICKED) {
-        m_isMoveMode = !m_isMoveMode;
-        SetWindowText(m_hMoveBtn, m_isMoveMode ? TEXT("移动: ON") : TEXT("移动: OFF"));
-
-        // 互斥：如果开启移动模式，关闭橡皮擦
-        if (m_isMoveMode && m_isEraserMode) {
-            m_isEraserMode = false;
-            SetWindowText(m_hEraserBtn, TEXT("橡皮擦: OFF"));
-        }
         SetFocus(hWnd);
     }
 }
@@ -737,15 +708,6 @@ bool UI::HandleMouseClick(int x, int y, bool leftButton, LifeGame &game,
 
         if (cellX >= 0 && cellX < game.GetWidth() && cellY >= 0 && cellY < game.GetHeight()) {
             if (leftButton) {
-                // 如果是移动模式，左键拖拽平移
-                if (m_isMoveMode) {
-                    m_isDragging = true;
-                    m_isPanning = true;
-                    m_lastMouseX = x;
-                    m_lastMouseY = y;
-                    return true;
-                }
-
                 // 如果是橡皮擦模式，左键也擦除
                 if (m_isEraserMode) {
                     // 根据橡皮擦大小擦除区域
