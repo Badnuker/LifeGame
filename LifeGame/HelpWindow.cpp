@@ -5,7 +5,8 @@ HelpWindow *g_pHelpWindow = nullptr;
 
 HelpWindow::HelpWindow()
     : m_hWnd(nullptr), m_hList(nullptr), m_hZoomInBtn(nullptr), m_hZoomOutBtn(nullptr),
-      m_currentPage(0), m_fontScale(1.3f), m_hTitleFont(nullptr), m_hBodyFont(nullptr) {
+      m_currentPage(0), m_scrollY(0), m_contentHeight(0), m_fontScale(1.3f),
+      m_hTitleFont(nullptr), m_hBodyFont(nullptr) {
     // 初始化帮助内容
     m_pages.push_back({
         L"新手指南",
@@ -13,13 +14,11 @@ HelpWindow::HelpWindow()
         L"1. 随机开始：\n"
         L"   按键盘上的 'G' 键，画布会随机生成细胞。按 'SPACE' (空格) 键开始演化，观察混乱如何变成有序。\n\n"
         L"2. 放置图案：\n"
-        L"   在左侧面板的 'Pattern' 下拉框中选择 'Gosper Glider Gun' (滑翔机枪)。\n"
+        L"   在左侧面板的 'Pattern' 下拉框中选择 '滑翔机枪'。\n"
         L"   在画布空白处点击左键，放置它。按空格开始，你会看到它不断发射小滑翔机。\n\n"
         L"3. 绘制细胞：\n"
         L"   按 'R' 键清空画布。用鼠标左键在画布上随意画一些点，然后按空格观察它们如何变化。\n\n"
-        L"4. 移动视野：\n"
-        L"   点击左侧工具栏的 'MOVE' 按钮开启移动模式，然后按住鼠标左键拖动画布。再次点击 'MOVE' 按钮返回绘制模式。\n\n"
-        L"5. 探索规则：\n"
+        L"4. 探索规则：\n"
         L"   在左侧 'Rule' 下拉框中切换到 'HighLife' 或 'Day & Night'，同样的图案会有完全不同的演化结果！"
     });
 
@@ -58,11 +57,8 @@ HelpWindow::HelpWindow()
     m_pages.push_back({
         L"操作指南",
         L"鼠标操作：\n"
-        L"- 普通模式 (MOVE 关闭)：\n"
-        L"  * 左键点击/拖动：绘制细胞 (使用当前选中的笔刷)\n"
-        L"  * 右键点击/拖动：擦除细胞\n"
-        L"- 移动模式 (MOVE 开启)：\n"
-        L"  * 左键拖动：平移画布\n\n"
+        L"左键点击/拖动：绘制细胞 (使用当前选中的笔刷)\n"
+        L"右键拖动：平移画布\n"
         L"键盘快捷键：\n"
         L"- SPACE：开始 / 暂停演化\n"
         L"- R：重置画布 (清空)\n"
@@ -74,10 +70,9 @@ HelpWindow::HelpWindow()
     m_pages.push_back({
         L"图案库",
         L"程序内置了丰富的图案库，包括：\n\n"
-        L"- 静态物体 (Still Lifes)：方块、蜂巢等，永远不变。\n"
         L"- 振荡器 (Oscillators)：信号灯、脉冲星等，按周期变化。\n"
-        L"- 飞船 (Spaceships)：滑翔机、轻型飞船等，会移动。\n"
-        L"- 枪 (Guns)：高斯帕滑翔机枪，能不断发射滑翔机。\n\n"
+        L"- 飞船 (Spaceships)：滑翔机、太空船等，会移动。\n"
+        L"- 枪 (Guns)：滑翔机枪、繁殖者，能不断发射滑翔机。\n\n"
         L"在左侧面板选择笔刷模式即可使用。"
     });
 
@@ -92,9 +87,9 @@ HelpWindow::HelpWindow()
 
     m_pages.push_back({
         L"关于",
-        L"LifeGame v3.1 (Win32 GDI)\n\n"
+        L"LifeGame v3.3 (Win32 GDI)\n\n"
         L"开发：Zhong yi, Liu qingxin, Dong kehong\n"
-        L"技术栈：C++17, Windows API (GDI), MinGW-w64\n\n"
+        L"技术栈：C++, Windows API (GDI)\n\n"
         L"本项目旨在展示高性能的细胞自动机模拟与现代化的 GDI 绘图技术。\n"
     });
 }
@@ -157,6 +152,9 @@ LRESULT CALLBACK HelpWindow::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) 
                 return 0;
             case WM_COMMAND:
                 pThis->OnCommand(hWnd, LOWORD(wp), HIWORD(wp));
+                return 0;
+            case WM_MOUSEWHEEL:
+                pThis->OnMouseWheel(hWnd, GET_WHEEL_DELTA_WPARAM(wp));
                 return 0;
         }
     }
@@ -234,15 +232,13 @@ void HelpWindow::OnSize(HWND hWnd) {
 void HelpWindow::OnCommand(HWND hWnd, int id, int code) {
     if (id == 100) // ListBox
     {
-        if (code == LBN_SELCHANGE) {
+        if (code == LBN_SELCHANGE || code == LBN_DBLCLK) {
             int sel = static_cast<int>(SendMessage(m_hList, LB_GETCURSEL, 0, 0));
             if (sel >= 0 && sel < static_cast<int>(m_pages.size())) {
                 m_currentPage = sel;
-                // 重绘右侧区域
-                RECT rc;
-                GetClientRect(hWnd, &rc);
-                rc.left = 220;
-                InvalidateRect(hWnd, &rc, TRUE);
+                m_scrollY = 0; // 切换页面时重置滚动位置
+                // 重绘整个窗口
+                InvalidateRect(hWnd, nullptr, TRUE);
             }
         }
     } else if (id == 101) // Zoom In
@@ -268,14 +264,35 @@ void HelpWindow::OnPaint(HWND hWnd) {
 
     RECT rc;
     GetClientRect(hWnd, &rc);
-    rc.left = 220 + 30; // 右侧内容区域，留出更多边距
-    rc.top += 30;
-    rc.right -= 30;
-    rc.bottom -= 30;
+
+    // 创建双缓冲
+    HDC hdcMem = CreateCompatibleDC(hdc);
+    HBITMAP hBitmap = CreateCompatibleBitmap(hdc, rc.right, rc.bottom);
+    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hdcMem, hBitmap);
+
+    // 填充背景
+    HBRUSH hBgBrush = CreateSolidBrush(GetSysColor(COLOR_WINDOW));
+    FillRect(hdcMem, &rc, hBgBrush);
+    DeleteObject(hBgBrush);
+
+    // 计算内容区域
+    RECT contentRect = rc;
+    contentRect.left = 220 + 30;
+    contentRect.top += 30;
+    contentRect.right -= 30;
+    contentRect.bottom -= 30;
 
     if (m_currentPage >= 0 && m_currentPage < static_cast<int>(m_pages.size())) {
-        DrawPage(hdc, rc);
+        DrawPage(hdcMem, contentRect);
     }
+
+    // 将缓冲区复制到屏幕
+    BitBlt(hdc, 0, 0, rc.right, rc.bottom, hdcMem, 0, 0, SRCCOPY);
+
+    // 清理
+    SelectObject(hdcMem, hOldBitmap);
+    DeleteObject(hBitmap);
+    DeleteDC(hdcMem);
 
     EndPaint(hWnd, &ps);
 }
@@ -285,30 +302,77 @@ void HelpWindow::DrawPage(HDC hdc, const RECT &rect) {
 
     SetBkMode(hdc, TRANSPARENT);
 
-    // 绘制标题
+    // 计算内容总高度
+    int titleH = static_cast<int>(60 * m_fontScale);
+
+    // 先计算正文高度
+    RECT calcRect = rect;
+    calcRect.top += titleH;
+    SelectObject(hdc, m_hBodyFont);
+    int bodyHeight = DrawText(hdc, page.content.c_str(), -1, &calcRect, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_CALCRECT);
+    m_contentHeight = titleH + bodyHeight;
+
+    // 限制滚动范围
+    int viewHeight = rect.bottom - rect.top;
+    int maxScroll = m_contentHeight - viewHeight;
+    if (maxScroll < 0) maxScroll = 0;
+    if (m_scrollY > maxScroll) m_scrollY = maxScroll;
+    if (m_scrollY < 0) m_scrollY = 0;
+
+    // 设置裁剪区域
+    HRGN hClipRgn = CreateRectRgn(rect.left, rect.top, rect.right, rect.bottom);
+    SelectClipRgn(hdc, hClipRgn);
+
+    // 绘制标题 (应用滚动偏移)
     auto hOld = static_cast<HFONT>(SelectObject(hdc, m_hTitleFont));
     SetTextColor(hdc, RGB(0, 50, 100));
 
     RECT titleRect = rect;
+    titleRect.top -= m_scrollY;
     DrawText(hdc, page.title.c_str(), -1, &titleRect, DT_LEFT | DT_TOP | DT_SINGLELINE);
 
-    // 绘制分割线
-    int titleH = static_cast<int>(60 * m_fontScale); // 增加标题高度
-    HPEN hPen = CreatePen(PS_SOLID, 2, RGB(200, 200, 200));
-    auto hOldPen = static_cast<HPEN>(SelectObject(hdc, hPen));
-    MoveToEx(hdc, rect.left, rect.top + static_cast<int>(50 * m_fontScale), nullptr);
-    LineTo(hdc, rect.right, rect.top + static_cast<int>(50 * m_fontScale));
-    SelectObject(hdc, hOldPen);
-    DeleteObject(hPen);
+    // 绘制分割线 (应用滚动偏移)
+    int lineY = rect.top + static_cast<int>(50 * m_fontScale) - m_scrollY;
+    if (lineY >= rect.top && lineY <= rect.bottom) {
+        HPEN hPen = CreatePen(PS_SOLID, 2, RGB(200, 200, 200));
+        auto hOldPen = static_cast<HPEN>(SelectObject(hdc, hPen));
+        MoveToEx(hdc, rect.left, lineY, nullptr);
+        LineTo(hdc, rect.right, lineY);
+        SelectObject(hdc, hOldPen);
+        DeleteObject(hPen);
+    }
 
-    // 绘制正文
+    // 绘制正文 (应用滚动偏移)
     SelectObject(hdc, m_hBodyFont);
     SetTextColor(hdc, RGB(50, 50, 50));
 
     RECT bodyRect = rect;
-    bodyRect.top += titleH;
+    bodyRect.top += titleH - m_scrollY;
 
     DrawText(hdc, page.content.c_str(), -1, &bodyRect, DT_LEFT | DT_TOP | DT_WORDBREAK);
 
     SelectObject(hdc, hOld);
+
+    // 清除裁剪区域
+    SelectClipRgn(hdc, nullptr);
+    DeleteObject(hClipRgn);
+}
+
+void HelpWindow::OnMouseWheel(HWND hWnd, int delta) {
+    // delta > 0 向上滚动，delta < 0 向下滚动
+    int scrollAmount = 40; // 每次滚动的像素数
+
+    if (delta > 0) {
+        m_scrollY -= scrollAmount;
+        if (m_scrollY < 0) m_scrollY = 0;
+    } else {
+        m_scrollY += scrollAmount;
+        // 上限在 DrawPage 中检查
+    }
+
+    // 只重绘右侧内容区域，不擦除背景（由双缓冲处理）
+    RECT rc;
+    GetClientRect(hWnd, &rc);
+    rc.left = 220;
+    InvalidateRect(hWnd, &rc, FALSE);
 }

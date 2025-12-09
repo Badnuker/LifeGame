@@ -708,6 +708,7 @@ bool UI::HandleMouseClick(int x, int y, bool leftButton, LifeGame &game,
 
         if (cellX >= 0 && cellX < game.GetWidth() && cellY >= 0 && cellY < game.GetHeight()) {
             if (leftButton) {
+
                 // 如果是橡皮擦模式，左键也擦除
                 if (m_isEraserMode) {
                     // 根据橡皮擦大小擦除区域

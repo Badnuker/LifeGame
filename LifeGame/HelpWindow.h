@@ -47,6 +47,7 @@ private:
     void OnPaint(HWND hWnd); ///< 处理绘图消息 (WM_PAINT)
     void OnSize(HWND hWnd); ///< 处理窗口大小改变消息 (WM_SIZE)
     void OnCommand(HWND hWnd, int id, int code); ///< 处理命令消息 (WM_COMMAND)
+    void OnMouseWheel(HWND hWnd, int delta); ///< 处理鼠标滚轮消息 (WM_MOUSEWHEEL)
 
     /**
      * @brief 绘制当前页面内容
@@ -69,6 +70,8 @@ private:
     HWND m_hZoomOutBtn; ///< 缩小按钮句柄
 
     int m_currentPage; ///< 当前选中的页面索引
+    int m_scrollY; ///< 当前页面滚动偏移量
+    int m_contentHeight; ///< 当前页面内容总高度
     float m_fontScale; ///< 字体缩放比例 (默认 1.0)
 
     std::vector<HelpPage> m_pages; ///< 帮助页面数据集合

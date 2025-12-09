@@ -764,12 +764,14 @@ void Renderer::DrawLeftPanel(HDC hdc, int clientWidth, int clientHeight, const L
         RECT keyR = {panelPaddingX, y, panelPaddingX + keyColW, y + lineH};
         RECT descR = {panelPaddingX + keyColW + 4, y, LEFT_PANEL_WIDTH - 10, y + lineH};
 
-        SelectObject(hdc, m_hLeftDescFont); // 统一使用相同字体
+        auto hOld = static_cast<HFONT>(SelectObject(hdc, m_hLeftKeyFont));
         SetTextColor(hdc, m_colHighlight); // 高亮快捷键
         DrawText(hdc, sc[i].key, -1, &keyR, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 
+        SelectObject(hdc, m_hLeftDescFont);
         SetTextColor(hdc, m_colText); // 普通文本颜色
         DrawText(hdc, sc[i].desc, -1, &descR, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
+        SelectObject(hdc, hOld);
     }
 }
 
