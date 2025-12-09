@@ -7,37 +7,32 @@
  * 
  * 在这里调用 InitBuiltinPatterns 来填充图案库。
  */
-PatternLibrary::PatternLibrary()
-{
-	InitBuiltinPatterns();
+PatternLibrary::PatternLibrary() {
+    InitBuiltinPatterns();
 }
 
 /**
  * @brief 析构函数
  */
-PatternLibrary::~PatternLibrary()
-{
-	m_patterns.clear();
+PatternLibrary::~PatternLibrary() {
+    m_patterns.clear();
 }
 
 /**
  * @brief 获取所有图案
  */
-const std::vector<PatternData>& PatternLibrary::GetPatterns() const
-{
-	return m_patterns;
+const std::vector<PatternData> &PatternLibrary::GetPatterns() const {
+    return m_patterns;
 }
 
 /**
  * @brief 获取指定图案
  */
-const PatternData* PatternLibrary::GetPattern(int index) const
-{
-	if (index >= 0 && index < static_cast<int>(m_patterns.size()))
-	{
-		return &m_patterns[index];
-	}
-	return nullptr;
+const PatternData *PatternLibrary::GetPattern(int index) const {
+    if (index >= 0 && index < static_cast<int>(m_patterns.size())) {
+        return &m_patterns[index];
+    }
+    return nullptr;
 }
 
 /**
@@ -56,82 +51,66 @@ const PatternData* PatternLibrary::GetPattern(int index) const
  * @return true 成功
  * @return false 失败
  */
-bool PatternLibrary::ParseRLE(const std::string& rle, std::vector<std::vector<bool>>& outGrid)
-{
-	outGrid.clear();
-	if (rle.empty()) return false;
+bool PatternLibrary::ParseRLE(const std::string &rle, std::vector<std::vector<bool> > &outGrid) {
+    outGrid.clear();
+    if (rle.empty()) return false;
 
-	std::vector<bool> currentRow;
-	int count = 0;
-	int width = 0;
+    std::vector<bool> currentRow;
+    int count = 0;
+    int width = 0;
 
-	for (size_t i = 0; i < rle.length(); ++i)
-	{
-		char c = rle[i];
+    for (size_t i = 0; i < rle.length(); ++i) {
+        char c = rle[i];
 
-		if (isdigit(c))
-		{
-			// 如果是数字，累加计算重复次数
-			// 支持多位数字，例如 "24o"
-			count = count * 10 + (c - '0');
-		}
-		else
-		{
-			// 如果没有数字前缀，默认为 1
-			if (count == 0) count = 1;
+        if (isdigit(c)) {
+            // 如果是数字，累加计算重复次数
+            // 支持多位数字，例如 "24o"
+            count = count * 10 + (c - '0');
+        } else {
+            // 如果没有数字前缀，默认为 1
+            if (count == 0) count = 1;
 
-			if (c == 'b')
-			{
-				// 'b' = dead cell
-				for (int k = 0; k < count; ++k) currentRow.push_back(false);
-			}
-			else if (c == 'o')
-			{
-				// 'o' = alive cell
-				for (int k = 0; k < count; ++k) currentRow.push_back(true);
-			}
-			else if (c == '$')
-			{
-				// '$' = end of line
-				// 记录最大宽度
-				if (currentRow.size() > width) width = static_cast<int>(currentRow.size());
+            if (c == 'b') {
+                // 'b' = dead cell
+                for (int k = 0; k < count; ++k) currentRow.push_back(false);
+            } else if (c == 'o') {
+                // 'o' = alive cell
+                for (int k = 0; k < count; ++k) currentRow.push_back(true);
+            } else if (c == '$') {
+                // '$' = end of line
+                // 记录最大宽度
+                if (currentRow.size() > width) width = static_cast<int>(currentRow.size());
 
-				outGrid.push_back(currentRow);
-				currentRow.clear();
+                outGrid.push_back(currentRow);
+                currentRow.clear();
 
-				// 处理空行 (例如 "3$" 表示跳过3行)
-				// 注意：第一行已经通过上面的 push_back 添加了，所以这里添加 count-1 个空行
-				for (int k = 1; k < count; ++k)
-				{
-					outGrid.push_back(std::vector<bool>());
-				}
-			}
-			else if (c == '!')
-			{
-				// '!' = end of pattern
-				if (!currentRow.empty())
-				{
-					if (currentRow.size() > width) width = static_cast<int>(currentRow.size());
-					outGrid.push_back(currentRow);
-				}
-				break;
-			}
+                // 处理空行 (例如 "3$" 表示跳过3行)
+                // 注意：第一行已经通过上面的 push_back 添加了，所以这里添加 count-1 个空行
+                for (int k = 1; k < count; ++k) {
+                    outGrid.push_back(std::vector<bool>());
+                }
+            } else if (c == '!') {
+                // '!' = end of pattern
+                if (!currentRow.empty()) {
+                    if (currentRow.size() > width) width = static_cast<int>(currentRow.size());
+                    outGrid.push_back(currentRow);
+                }
+                break;
+            }
 
-			// 重置计数器
-			count = 0;
-		}
-	}
+            // 重置计数器
+            count = 0;
+        }
+    }
 
-	// 规范化网格：确保所有行长度一致，用 false 填充
-	for (auto& row : outGrid)
-	{
-		if (row.size() < width)
-		{
-			row.resize(width, false);
-		}
-	}
+    // 规范化网格：确保所有行长度一致，用 false 填充
+    for (auto &row: outGrid) {
+        if (row.size() < width) {
+            row.resize(width, false);
+        }
+    }
 
-	return true;
+    return true;
 }
 
 /**
@@ -140,93 +119,92 @@ bool PatternLibrary::ParseRLE(const std::string& rle, std::vector<std::vector<bo
  * 这里包含了大量经典的 Life 游戏图案数据。
  * 数据来源：LifeWiki 及其他开源图案库。
  */
-void PatternLibrary::InitBuiltinPatterns()
-{
-	// 单点绘制 (Single Cell) - 特殊占位符
-	m_patterns.push_back({
-		L"单点绘制",
-		L"点击网格绘制单个细胞。",
-		"", // 空 RLE
-		0, 0
-	});
+void PatternLibrary::InitBuiltinPatterns() {
+    // 单点绘制 (Single Cell) - 特殊占位符
+    m_patterns.push_back({
+        L"单点绘制",
+        L"点击网格绘制单个细胞。",
+        "", // 空 RLE
+        0, 0
+    });
 
-	// 信号灯
-	m_patterns.push_back({
-		L"信号灯",
-		L"周期=2轮",
-		"3o!",
-		3, 1
-	});
+    // 信号灯
+    m_patterns.push_back({
+        L"信号灯",
+        L"周期=2轮",
+        "3o!",
+        3, 1
+    });
 
-	// 蟾蜍
-	m_patterns.push_back({
-		L"蟾蜍",
-		L"周期=2轮",
-		"b3o$3ob!",
-		4, 2
-	});
+    // 蟾蜍
+    m_patterns.push_back({
+        L"蟾蜍",
+        L"周期=2轮",
+        "b3o$3ob!",
+        4, 2
+    });
 
-	// 红绿灯
-	m_patterns.push_back({
-		L"红绿灯",
-		L"周期=2轮",
-		"2b3o2b2$o5bo$o5bo$o5bo2$2b3o2b!",
-		7, 7
-	});
+    // 红绿灯
+    m_patterns.push_back({
+        L"红绿灯",
+        L"周期=2轮",
+        "2b3o2b2$o5bo$o5bo$o5bo2$2b3o2b!",
+        7, 7
+    });
 
-	// 脉冲星
-	m_patterns.push_back({
-		L"脉冲星",
-		L"周期=3轮",
-		"2b3o3b3o2b2$o4bobo4bo$o4bobo4bo$o4bobo4bo$2b3o3b3o2b2$2b3o3b3o2b$o4bobo4bo$o4bobo4bo$o4bobo4bo2$2b3o3b3o2b!",
-		13, 13
-	});
+    // 脉冲星
+    m_patterns.push_back({
+        L"脉冲星",
+        L"周期=3轮",
+        "2b3o3b3o2b2$o4bobo4bo$o4bobo4bo$o4bobo4bo$2b3o3b3o2b2$2b3o3b3o2b$o4bobo4bo$o4bobo4bo$o4bobo4bo2$2b3o3b3o2b!",
+        13, 13
+    });
 
-	// 慨影
-	m_patterns.push_back({
-		L"慨影",
-		L"周期=15轮",
-		"3o$obo$3o$3o$3o$3o$obo$3o!",
-		3, 8
-	});
+    // 慨影
+    m_patterns.push_back({
+        L"慨影",
+        L"周期=15轮",
+        "3o$obo$3o$3o$3o$3o$obo$3o!",
+        3, 8
+    });
 
-	// 滑翔机
-	m_patterns.push_back({
-		L"滑翔机",
-		L"周期=4轮",
-		"bob$2bo$3o!",
-		3, 3
-	});
+    // 滑翔机
+    m_patterns.push_back({
+        L"滑翔机",
+        L"周期=4轮",
+        "bob$2bo$3o!",
+        3, 3
+    });
 
-	// 太空船
-	m_patterns.push_back({
-		L"太空船",
-		L"周期=4轮",
-		"2b2o3b$o4bob$6bo$o5bo$b6o!",
-		7, 5
-	});
+    // 太空船
+    m_patterns.push_back({
+        L"太空船",
+        L"周期=4轮",
+        "2b2o3b$o4bob$6bo$o5bo$b6o!",
+        7, 5
+    });
 
-	// 高斯帕滑翔机枪
-	m_patterns.push_back({
-		L"高斯帕滑翔机枪",
-		L"周期性发射滑翔机",
-		"24bo11b$22bobo11b$12b2o6b2o12b2o$11bo3bo4b2o12b2o$2o8bo5bo3b2o14b$2o8bo3bob2o4bobo11b$10bo5bo7bo11b$11bo3bo20b$12b2o22b!",
-		36, 9
-	});
+    // 高斯帕滑翔机枪
+    m_patterns.push_back({
+        L"高斯帕滑翔机枪",
+        L"周期性发射滑翔机",
+        "24bo11b$22bobo11b$12b2o6b2o12b2o$11bo3bo4b2o12b2o$2o8bo5bo3b2o14b$2o8bo3bob2o4bobo11b$10bo5bo7bo11b$11bo3bo20b$12b2o22b!",
+        36, 9
+    });
 
-	// 银河
-	m_patterns.push_back({
-		L"银河",
-		L"看起来像旋转的星系，周期=8轮",
-		"6ob2o$6ob2o$7b2o$2o5b2o$2o5b2o$2o5b2o$2o7b$2ob6o$2ob6o!",
-		9, 9
-	});
+    // 银河
+    m_patterns.push_back({
+        L"银河",
+        L"看起来像旋转的星系，周期=8轮",
+        "6ob2o$6ob2o$7b2o$2o5b2o$2o5b2o$2o5b2o$2o7b$2ob6o$2ob6o!",
+        9, 9
+    });
 
-	// 繁殖者
-	m_patterns.push_back({
-		L"繁殖者",
-		L"产生滑翔机枪的飞船，种群呈二次方增长",
-		"404bo2bo341b$408bo340b$404bo3bo340b$405b4o340b$416b2o331b$402bo11bo4bo \
+    // 繁殖者
+    m_patterns.push_back({
+        L"繁殖者",
+        L"产生滑翔机枪的飞船，种群呈二次方增长",
+        "404bo2bo341b$408bo340b$404bo3bo340b$405b4o340b$416b2o331b$402bo11bo4bo \
 		329b$400bobo17bo328b$342bobo46bo8bobo11bo5bo328b$342bobo44bo3bo21b6o5b \
 		6o317b$331bo10bob2o48bo30bo5bo317b$329bo3bo10b2o43bo4bo36bo317b$334bo \
 		6bo2bo45b5o30bo4bo318b$329bo4bo7b2o83b2o320b$330b5o50b2o362b$385b2o32b \
@@ -381,6 +359,6 @@ void PatternLibrary::InitBuiltinPatterns()
 		5b4o317b$403b2o15b2o327b$402bo346b$407b2o340b$406b4o339b$406b2ob2o338b \
 		$408b2o! \
 		",
-		749, 338
-	});
+        749, 338
+    });
 }

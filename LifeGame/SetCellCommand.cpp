@@ -12,8 +12,7 @@
  * @param oldState 修改前的旧状态 (用于撤销)
  */
 SetCellCommand::SetCellCommand(int x, int y, bool newState, bool oldState)
-	: m_x(x), m_y(y), m_newState(newState), m_oldState(oldState)
-{
+    : m_x(x), m_y(y), m_newState(newState), m_oldState(oldState) {
 }
 
 /**
@@ -23,9 +22,8 @@ SetCellCommand::SetCellCommand(int x, int y, bool newState, bool oldState)
  * 
  * @param game 游戏实例引用
  */
-void SetCellCommand::Execute(LifeGame& game)
-{
-	game.SetCell(m_x, m_y, m_newState);
+void SetCellCommand::Execute(LifeGame &game) {
+    game.SetCell(m_x, m_y, m_newState);
 }
 
 /**
@@ -35,7 +33,6 @@ void SetCellCommand::Execute(LifeGame& game)
  * 
  * @param game 游戏实例引用
  */
-void SetCellCommand::Undo(LifeGame& game)
-{
-	game.SetCell(m_x, m_y, m_oldState);
+void SetCellCommand::Undo(LifeGame &game) {
+    game.SetCell(m_x, m_y, m_oldState);
 }
