@@ -435,10 +435,6 @@ void Renderer::DrawPreview(HDC hdc, const LifeGame &game, int cellSize, int offX
             int w = p->width;
             int h = p->height;
 
-            // 限制范围
-            if (w > 50) w = 50;
-            if (h > 50) h = 50;
-
             // 尝试解析 (如果 ParseRLE 是 const 的话)
             // const_cast<PatternLibrary&>(game.GetPatternLibrary()).ParseRLE(...)
 

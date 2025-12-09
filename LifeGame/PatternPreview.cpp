@@ -111,32 +111,63 @@ void PatternPreview::OnPaint(HWND hWnd) {
             // 取较小值以保持纵横比
             int cellSize = (cellW < cellH) ? cellW : cellH;
 
-            // 限制细胞大小范围
-            if (cellSize < 1) cellSize = 1;
-            if (cellSize > 20) cellSize = 20; // 最大限制
+            // 对于超大图案，如果 cellSize 为 0，则使用浮点数计算
+            if (cellSize < 1) {
+                // 超大图案：绘制缩略图
+                float scaleX = static_cast<float>(w) / cols;
+                float scaleY = static_cast<float>(h) / rows;
+                float scale = (scaleX < scaleY) ? scaleX : scaleY;
 
-            // 计算居中偏移量
-            int gridW = cols * cellSize;
-            int gridH = rows * cellSize;
-            int offX = (w - gridW) / 2;
-            int offY = (h - gridH) / 2;
+                int gridW = static_cast<int>(cols * scale);
+                int gridH = static_cast<int>(rows * scale);
+                int offX = (w - gridW) / 2;
+                int offY = (h - gridH) / 2;
 
-            // 绘制网格
-            for (int y = 0; y < rows; ++y) {
-                for (int x = 0; x < cols; ++x) {
-                    if (m_previewGrid[y][x]) {
-                        RECT cell = {
-                            offX + x * cellSize,
-                            offY + y * cellSize,
-                            offX + (x + 1) * cellSize,
-                            offY + (y + 1) * cellSize
-                        };
-                        // 稍微缩小一点，留出间隔 (Grid Gap)
-                        if (cellSize > 2) {
-                            cell.right--;
-                            cell.bottom--;
+                // 绘制缩略图：每个像素代表多个细胞
+                for (int y = 0; y < rows; ++y) {
+                    for (int x = 0; x < cols; ++x) {
+                        if (m_previewGrid[y][x]) {
+                            int px = offX + static_cast<int>(x * scale);
+                            int py = offY + static_cast<int>(y * scale);
+                            // 至少绘制1个像素
+                            RECT cell = {px, py, px + 1, py + 1};
+                            if (scale >= 0.5f) {
+                                cell.right = px + static_cast<int>(scale);
+                                cell.bottom = py + static_cast<int>(scale);
+                                if (cell.right <= cell.left) cell.right = cell.left + 1;
+                                if (cell.bottom <= cell.top) cell.bottom = cell.top + 1;
+                            }
+                            FillRect(hdc, &cell, m_hCellBrush);
                         }
-                        FillRect(hdc, &cell, m_hCellBrush);
+                    }
+                }
+            } else {
+                // 正常大小图案
+                if (cellSize > 20) cellSize = 20; // 最大限制
+
+                // 计算居中偏移量
+                int gridW = cols * cellSize;
+                int gridH = rows * cellSize;
+                int offX = (w - gridW) / 2;
+                int offY = (h - gridH) / 2;
+
+                // 绘制网格
+                for (int y = 0; y < rows; ++y) {
+                    for (int x = 0; x < cols; ++x) {
+                        if (m_previewGrid[y][x]) {
+                            RECT cell = {
+                                offX + x * cellSize,
+                                offY + y * cellSize,
+                                offX + (x + 1) * cellSize,
+                                offY + (y + 1) * cellSize
+                            };
+                            // 稍微缩小一点，留出间隔 (Grid Gap)
+                            if (cellSize > 2) {
+                                cell.right--;
+                                cell.bottom--;
+                            }
+                            FillRect(hdc, &cell, m_hCellBrush);
+                        }
                     }
                 }
             }
