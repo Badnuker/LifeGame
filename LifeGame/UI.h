@@ -54,6 +54,8 @@ private:
 	HWND m_hHelpBtn; // 新增：帮助按钮
 	HWND m_hUndoBtn; // 新增：撤销按钮
 	HWND m_hEraserBtn; // 新增：橡皮擦按钮
+	HWND m_hEraserSizeLabel; // 新增：橡皮擦大小标签
+	HWND m_hEraserSizeCombo; // 新增：橡皮擦大小下拉框
 	HWND m_hMoveBtn; // 新增：移动按钮
 	HWND m_hToolTip;
 
@@ -73,6 +75,7 @@ private:
 	bool m_dragValue;
 	bool m_applyHover;
 	bool m_isEraserMode;
+	int m_eraserSize; // 新增：橡皮擦大小 (1, 3, 5, 7...)
 	bool m_isMoveMode; // 新增：移动模式
 	int m_lastGridX;
 	int m_lastGridY;

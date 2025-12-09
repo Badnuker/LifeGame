@@ -99,8 +99,9 @@ public:
 	 * @param y 预览位置 Y (网格坐标)
 	 * @param patternIndex 图案索引
 	 * @param isEraser 是否为橡皮擦模式
+	 * @param eraserSize 橡皮擦大小 (1, 3, 5, 7...)
 	 */
-	void SetPreview(int x, int y, int patternIndex, bool isEraser);
+	void SetPreview(int x, int y, int patternIndex, bool isEraser, int eraserSize = 1);
 
 	// ==========================================
 	// 视图控制 (View Control)
@@ -174,6 +175,7 @@ private:
 	int m_previewY;
 	int m_previewPatternIndex;
 	bool m_isEraserPreview;
+	int m_eraserSize; // 橡皮擦大小
 	HBRUSH m_hPreviewBrush; // 预览画刷
 	HPEN m_hEraserPen; // 橡皮擦预览笔
 };

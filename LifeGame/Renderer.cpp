@@ -20,7 +20,7 @@ Renderer::Renderer()
 	  m_hControlFont(nullptr), m_hLeftKeyFont(nullptr),
 	  m_hLeftDescFont(nullptr), m_hBrandingFont(nullptr), m_hDataFont(nullptr), m_previewX(-1),
 	  m_previewY(-1), m_previewPatternIndex(-1),
-	  m_isEraserPreview(false), m_hPreviewBrush(nullptr), m_hEraserPen(nullptr)
+	  m_isEraserPreview(false), m_eraserSize(1), m_hPreviewBrush(nullptr), m_hEraserPen(nullptr)
 {
 	// 赛博朋克配色方案
 	m_colText = RGB(220, 240, 255); // 亮白蓝
@@ -243,12 +243,13 @@ void Renderer::UpdateVisualGrid(const LifeGame& game)
 	}
 }
 
-void Renderer::SetPreview(int x, int y, int patternIndex, bool isEraser)
+void Renderer::SetPreview(int x, int y, int patternIndex, bool isEraser, int eraserSize)
 {
 	m_previewX = x;
 	m_previewY = y;
 	m_previewPatternIndex = patternIndex;
 	m_isEraserPreview = isEraser;
+	m_eraserSize = eraserSize;
 }
 
 void Renderer::SetScale(float scale)
@@ -390,20 +391,39 @@ void Renderer::DrawPreview(HDC hdc, const LifeGame& game, int cellSize, int offX
 
 	if (m_isEraserPreview)
 	{
-		// 绘制红色边框表示擦除
-		int left = offX + m_previewX * cellSize;
-		int top = offY + m_previewY * cellSize;
-		RECT r = {left, top, left + cellSize, top + cellSize};
+		// 绘制红色边框表示擦除范围
+		int halfSize = m_eraserSize / 2;
+		int startX = m_previewX - halfSize;
+		int startY = m_previewY - halfSize;
 
 		auto hOldPen = static_cast<HPEN>(SelectObject(hdc, m_hEraserPen));
 		SelectObject(hdc, GetStockObject(NULL_BRUSH));
-		Rectangle(hdc, r.left, r.top, r.right, r.bottom);
 
-		// 画个叉
-		MoveToEx(hdc, r.left, r.top, nullptr);
-		LineTo(hdc, r.right, r.bottom);
-		MoveToEx(hdc, r.right, r.top, nullptr);
-		LineTo(hdc, r.left, r.bottom);
+		// 绘制每个要擦除的格子
+		for (int dy = 0; dy < m_eraserSize; ++dy)
+		{
+			for (int dx = 0; dx < m_eraserSize; ++dx)
+			{
+				int cellX = startX + dx;
+				int cellY = startY + dy;
+
+				// 检查边界
+				if (cellX < 0 || cellX >= game.GetWidth() || cellY < 0 || cellY >= game.GetHeight())
+					continue;
+
+				int left = offX + cellX * cellSize;
+				int top = offY + cellY * cellSize;
+				RECT r = {left, top, left + cellSize, top + cellSize};
+
+				Rectangle(hdc, r.left, r.top, r.right, r.bottom);
+
+				// 画个叉
+				MoveToEx(hdc, r.left, r.top, nullptr);
+				LineTo(hdc, r.right, r.bottom);
+				MoveToEx(hdc, r.right, r.top, nullptr);
+				LineTo(hdc, r.left, r.bottom);
+			}
+		}
 
 		SelectObject(hdc, hOldPen);
 	}

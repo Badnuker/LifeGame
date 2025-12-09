@@ -204,6 +204,26 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame& game)
 	                              leftX, leftY, editW, 30, hParent,
 	                              (HMENU)ID_ERASER_BTN, hInstance, nullptr);
 
+	// 橡皮擦大小控件
+	leftY += 30 + gapY / 2;
+	m_hEraserSizeLabel = CreateWindowEx(0, TEXT("STATIC"), TEXT("橡皮擦大小:"),
+	                                    WS_CHILD | WS_VISIBLE,
+	                                    leftX, leftY, labelW, 20, hParent,
+	                                    nullptr, hInstance, nullptr);
+	leftY += 20;
+	m_hEraserSizeCombo = CreateWindowEx(0, TEXT("COMBOBOX"), nullptr,
+	                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST,
+	                                    leftX, leftY, editW, 150, hParent,
+	                                    (HMENU)ID_ERASER_SIZE_COMBO, hInstance, nullptr);
+	// 添加橡皮擦大小选项
+	SendMessage(m_hEraserSizeCombo, CB_ADDSTRING, 0, (LPARAM)TEXT("1x1"));
+	SendMessage(m_hEraserSizeCombo, CB_ADDSTRING, 0, (LPARAM)TEXT("3x3"));
+	SendMessage(m_hEraserSizeCombo, CB_ADDSTRING, 0, (LPARAM)TEXT("5x5"));
+	SendMessage(m_hEraserSizeCombo, CB_ADDSTRING, 0, (LPARAM)TEXT("7x7"));
+	SendMessage(m_hEraserSizeCombo, CB_ADDSTRING, 0, (LPARAM)TEXT("9x9"));
+	SendMessage(m_hEraserSizeCombo, CB_SETCURSEL, 0, 0); // 默认 1x1
+	leftY += editH;
+
 	// 设置初始值
 	TCHAR tmpbuf[32];
 	_stprintf_s(tmpbuf, TEXT("%d"), game.GetHeight());
@@ -298,6 +318,10 @@ void UI::SetAllFonts(HFONT hFont)
 		SendMessage(m_hUndoBtn, WM_SETFONT, (WPARAM)hFont, TRUE);
 	if (m_hEraserBtn)
 		SendMessage(m_hEraserBtn, WM_SETFONT, (WPARAM)hFont, TRUE);
+	if (m_hEraserSizeLabel)
+		SendMessage(m_hEraserSizeLabel, WM_SETFONT, (WPARAM)hFont, TRUE);
+	if (m_hEraserSizeCombo)
+		SendMessage(m_hEraserSizeCombo, WM_SETFONT, (WPARAM)hFont, TRUE);
 }
 
 /**
@@ -382,6 +406,11 @@ void UI::LayoutControls(int clientWidth, int clientHeight)
 
 	leftY += 30 + gapY;
 	SetWindowPos(m_hEraserBtn, nullptr, leftX, leftY, editW, 30, SWP_NOZORDER);
+
+	leftY += 30 + gapY / 2;
+	SetWindowPos(m_hEraserSizeLabel, nullptr, leftX, leftY, labelW, 20, SWP_NOZORDER);
+	leftY += 20;
+	SetWindowPos(m_hEraserSizeCombo, nullptr, leftX, leftY, editW, editH, SWP_NOZORDER);
 }
 
 /**
@@ -690,6 +719,23 @@ void UI::HandleCommand(int id, int code, HWND hWnd, LifeGame& game, Renderer* pR
 		}
 		SetFocus(hWnd);
 	}
+	// 12. 橡皮擦大小选择
+	else if (id == ID_ERASER_SIZE_COMBO && code == CBN_SELCHANGE)
+	{
+		int sel = static_cast<int>(SendMessage(m_hEraserSizeCombo, CB_GETCURSEL, 0, 0));
+		// 选项: 0=1x1, 1=3x3, 2=5x5, 3=7x7, 4=9x9
+		switch (sel)
+		{
+		case 0: m_eraserSize = 1; break;
+		case 1: m_eraserSize = 3; break;
+		case 2: m_eraserSize = 5; break;
+		case 3: m_eraserSize = 7; break;
+		case 4: m_eraserSize = 9; break;
+		default: m_eraserSize = 1; break;
+		}
+		InvalidateRect(hWnd, nullptr, FALSE);
+		SetFocus(hWnd);
+	}
 	// 12. 移动模式开关
 	else if (id == ID_MOVE_BTN && code == BN_CLICKED)
 	{
@@ -757,11 +803,24 @@ bool UI::HandleMouseClick(int x, int y, bool leftButton, LifeGame& game,
 				// 如果是橡皮擦模式，左键也擦除
 				if (m_isEraserMode)
 				{
-					bool oldState = game.GetCell(cellX, cellY);
-					if (oldState != false)
+					// 根据橡皮擦大小擦除区域
+					int halfSize = m_eraserSize / 2;
+					for (int dy = -halfSize; dy <= halfSize; ++dy)
 					{
-						std::unique_ptr<Command> cmd(new SetCellCommand(cellX, cellY, false, oldState));
-						game.GetCommandHistory().ExecuteCommand(std::move(cmd), game);
+						for (int dx = -halfSize; dx <= halfSize; ++dx)
+						{
+							int cx = cellX + dx;
+							int cy = cellY + dy;
+							if (cx >= 0 && cx < game.GetWidth() && cy >= 0 && cy < game.GetHeight())
+							{
+								bool oldState = game.GetCell(cx, cy);
+								if (oldState != false)
+								{
+									std::unique_ptr<Command> cmd(new SetCellCommand(cx, cy, false, oldState));
+									game.GetCommandHistory().ExecuteCommand(std::move(cmd), game);
+								}
+							}
+						}
 					}
 					m_isDragging = true; // 使用左键拖拽标志，配合 m_isEraserMode 实现擦除
 					return true;
@@ -891,7 +950,7 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
 
 			int sel = static_cast<int>(SendMessage(m_hPatternCombo, CB_GETCURSEL, 0, 0));
 			bool showEraser = m_isEraserMode || m_isRightDragging;
-			pRenderer->SetPreview(hoverX, hoverY, sel, showEraser);
+			pRenderer->SetPreview(hoverX, hoverY, sel, showEraser, m_eraserSize);
 			previewChanged = true;
 		}
 	}
@@ -914,7 +973,31 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
 			{
 				bool target = m_dragValue; // 使用记录的拖拽值
 				// 如果是橡皮擦模式，左键拖拽也是擦除 (target=false)
-				if (m_isEraserMode) target = false;
+				if (m_isEraserMode)
+				{
+					// 根据橡皮擦大小擦除区域
+					int halfSize = m_eraserSize / 2;
+					bool erased = false;
+					for (int dy = -halfSize; dy <= halfSize; ++dy)
+					{
+						for (int dx = -halfSize; dx <= halfSize; ++dx)
+						{
+							int cx = cellX + dx;
+							int cy = cellY + dy;
+							if (cx >= 0 && cx < game.GetWidth() && cy >= 0 && cy < game.GetHeight())
+							{
+								bool oldState = game.GetCell(cx, cy);
+								if (oldState != false)
+								{
+									std::unique_ptr<Command> cmd(new SetCellCommand(cx, cy, false, oldState));
+									game.GetCommandHistory().ExecuteCommand(std::move(cmd), game);
+									erased = true;
+								}
+							}
+						}
+					}
+					return erased;
+				}
 
 				bool oldState = game.GetCell(cellX, cellY);
 				if (oldState != target)
@@ -955,7 +1038,7 @@ void UI::HandleMouseUp(bool leftButton, Renderer* pRenderer)
 	if (pRenderer)
 	{
 		int sel = static_cast<int>(SendMessage(m_hPatternCombo, CB_GETCURSEL, 0, 0));
-		pRenderer->SetPreview(m_lastGridX, m_lastGridY, sel, m_isEraserMode);
+		pRenderer->SetPreview(m_lastGridX, m_lastGridY, sel, m_isEraserMode, m_eraserSize);
 	}
 }
 
