@@ -801,21 +801,11 @@ bool UI::HandleMouseClick(int x, int y, bool leftButton, LifeGame& game,
 				}
 				return true;
 			}
-			// 右键擦除
-			bool oldState = game.GetCell(cellX, cellY);
-			if (oldState != false)
-			{
-				std::unique_ptr<Command> cmd(new SetCellCommand(cellX, cellY, false, oldState));
-				game.GetCommandHistory().ExecuteCommand(std::move(cmd), game);
-			}
+			// 右键拖动网格（平移）
 			m_isRightDragging = true;
-
-			// 立即更新预览为橡皮擦
-			if (pRenderer)
-			{
-				int sel = static_cast<int>(SendMessage(m_hPatternCombo, CB_GETCURSEL, 0, 0));
-				pRenderer->SetPreview(cellX, cellY, sel, true);
-			}
+			m_isPanning = true;
+			m_lastMouseX = x;
+			m_lastMouseY = y;
 			return true;
 		}
 	}
@@ -829,6 +819,15 @@ bool UI::HandleMouseClick(int x, int y, bool leftButton, LifeGame& game,
 			m_lastMouseX = x;
 			m_lastMouseY = y;
 			return true; // 捕获鼠标
+		}
+		else
+		{
+			// 右键在网格外部也启动平移
+			m_isRightDragging = true;
+			m_isPanning = true;
+			m_lastMouseX = x;
+			m_lastMouseY = y;
+			return true;
 		}
 	}
 	return false;
@@ -860,8 +859,8 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
 		r.CalcLayout(game, cellSize, offX, offY, gridW, gridH, clientWidth, clientHeight);
 	}
 
-	// 1. 处理平移
-	if (m_isDragging && m_isPanning && pRenderer)
+	// 1. 处理平移 (左键或右键拖拽)
+	if ((m_isDragging || m_isRightDragging) && m_isPanning && pRenderer)
 	{
 		int dx = x - m_lastMouseX;
 		int dy = y - m_lastMouseY;
@@ -928,33 +927,7 @@ bool UI::HandleMouseMove(int x, int y, LifeGame& game,
 		}
 	}
 
-	// 4. 处理右键擦除拖拽
-	if (m_isRightDragging)
-	{
-		if (x >= offX && x < offX + gridW && y >= offY && y < offY + gridH)
-		{
-			int cellX = (x - offX) / cellSize;
-			int cellY = (y - offY) / cellSize;
-
-			if (cellX >= 0 && cellX < game.GetWidth() && cellY >= 0 && cellY < game.GetHeight())
-			{
-				bool oldState = game.GetCell(cellX, cellY);
-				if (oldState != false)
-				{
-					std::unique_ptr<Command> cmd(new SetCellCommand(cellX, cellY, false, oldState));
-					game.GetCommandHistory().ExecuteCommand(std::move(cmd), game);
-				}
-
-				// 立即更新预览为橡皮擦
-				if (pRenderer)
-				{
-					int sel = static_cast<int>(SendMessage(m_hPatternCombo, CB_GETCURSEL, 0, 0));
-					pRenderer->SetPreview(cellX, cellY, sel, true);
-				}
-				return true;
-			}
-		}
-	}
+	// 4. 右键拖拽现在用于平移，不再擦除（已在上方处理）
 	return false;
 }
 
@@ -975,6 +948,7 @@ void UI::HandleMouseUp(bool leftButton, Renderer* pRenderer)
 	else
 	{
 		m_isRightDragging = false;
+		m_isPanning = false; // 右键松开也结束平移
 	}
 
 	// 恢复预览状态
