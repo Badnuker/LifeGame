@@ -78,12 +78,12 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame& game)
 
 	leftY += 140 + gapY;
 
-	// 1.6 简介标签 (新增)
+	// 1.6 简介标签 (新增) - 高度60以支持两行显示
 	m_hDescLabel = CreateWindowEx(0, TEXT("STATIC"), p ? p->description.c_str() : TEXT(""),
 	                              WS_CHILD | WS_VISIBLE | SS_LEFT,
-	                              leftX, leftY, editW, 40, hParent,
+	                              leftX, leftY, editW, 60, hParent,
 	                              nullptr, hInstance, nullptr);
-	leftY += 40 + gapY;
+	leftY += 60 + gapY;
 
 	// 2. 规则选择
 	m_hRuleLabel = CreateWindowEx(0, TEXT("STATIC"), TEXT("演化规则"),
@@ -126,26 +126,25 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame& game)
 
 	leftY += editH + gapY + 10;
 
-	// 3. 网格设置
-	m_hColsLabel = CreateWindowEx(0, TEXT("STATIC"), TEXT("网格列数 (W)"),
+	// 3. 网格设置 (行列放在同一行)
+	int halfW = (editW - 10) / 2; // 每个输入框的宽度，中间留 10px 间隔
+
+	m_hColsLabel = CreateWindowEx(0, TEXT("STATIC"), TEXT("列数(W)"),
 	                              WS_CHILD | WS_VISIBLE | SS_LEFT,
-	                              leftX, leftY, labelW, editH, hParent,
+	                              leftX, leftY, halfW, 20, hParent,
 	                              nullptr, hInstance, nullptr);
-	leftY += 28;
+	m_hRowsLabel = CreateWindowEx(0, TEXT("STATIC"), TEXT("行数(H)"),
+	                              WS_CHILD | WS_VISIBLE | SS_LEFT,
+	                              leftX + halfW + 10, leftY, halfW, 20, hParent,
+	                              nullptr, hInstance, nullptr);
+	leftY += 20;
 	m_hColsEdit = CreateWindowEx(0, TEXT("EDIT"), nullptr,
 	                             WS_CHILD | WS_VISIBLE | WS_BORDER | ES_NUMBER | ES_AUTOVSCROLL | WS_TABSTOP,
-	                             leftX, leftY, editW, editH, hParent,
+	                             leftX, leftY, halfW, editH, hParent,
 	                             (HMENU)ID_COLS_EDIT, hInstance, nullptr);
-
-	leftY += editH + gapY;
-	m_hRowsLabel = CreateWindowEx(0, TEXT("STATIC"), TEXT("网格行数 (H)"),
-	                              WS_CHILD | WS_VISIBLE | SS_LEFT,
-	                              leftX, leftY, labelW, editH, hParent,
-	                              nullptr, hInstance, nullptr);
-	leftY += 28;
 	m_hRowsEdit = CreateWindowEx(0, TEXT("EDIT"), nullptr,
 	                             WS_CHILD | WS_VISIBLE | WS_BORDER | ES_NUMBER | ES_AUTOVSCROLL | WS_TABSTOP,
-	                             leftX, leftY, editW, editH, hParent,
+	                             leftX + halfW + 10, leftY, halfW, editH, hParent,
 	                             (HMENU)ID_ROWS_EDIT, hInstance, nullptr);
 
 	leftY += editH + gapY + 10;
@@ -205,12 +204,12 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame& game)
 	                              (HMENU)ID_ERASER_BTN, hInstance, nullptr);
 
 	// 橡皮擦大小控件
-	leftY += 30 + gapY / 2;
+	leftY += 30 + gapY;
 	m_hEraserSizeLabel = CreateWindowEx(0, TEXT("STATIC"), TEXT("橡皮擦大小:"),
 	                                    WS_CHILD | WS_VISIBLE,
 	                                    leftX, leftY, labelW, 20, hParent,
 	                                    nullptr, hInstance, nullptr);
-	leftY += 20;
+	leftY += 24; // 增加间距避免重叠
 	m_hEraserSizeCombo = CreateWindowEx(0, TEXT("COMBOBOX"), nullptr,
 	                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST,
 	                                    leftX, leftY, editW, 150, hParent,
@@ -353,9 +352,9 @@ void UI::LayoutControls(int clientWidth, int clientHeight)
 	m_preview.Move(leftX, leftY, editW, 140);
 	leftY += 140 + gapY;
 
-	// 1.6 简介
-	SetWindowPos(m_hDescLabel, nullptr, leftX, leftY, editW, 40, SWP_NOZORDER);
-	leftY += 40 + gapY;
+	// 1.6 简介 - 高度60以支持两行显示
+	SetWindowPos(m_hDescLabel, nullptr, leftX, leftY, editW, 60, SWP_NOZORDER);
+	leftY += 60 + gapY;
 
 	// 2. 规则
 	SetWindowPos(m_hRuleLabel, nullptr, leftX, leftY, labelW, editH, SWP_NOZORDER);
@@ -371,16 +370,13 @@ void UI::LayoutControls(int clientWidth, int clientHeight)
 
 	leftY += editH + gapY + 10;
 
-	// 3. 网格
-	SetWindowPos(m_hColsLabel, nullptr, leftX, leftY, labelW, editH, SWP_NOZORDER);
-	leftY += 28;
-	SetWindowPos(m_hColsEdit, nullptr, leftX, leftY, editW, editH, SWP_NOZORDER);
-
-	leftY += editH + gapY;
-
-	SetWindowPos(m_hRowsLabel, nullptr, leftX, leftY, labelW, editH, SWP_NOZORDER);
-	leftY += 28;
-	SetWindowPos(m_hRowsEdit, nullptr, leftX, leftY, editW, editH, SWP_NOZORDER);
+	// 3. 网格 (行列同一行)
+	int halfW = (editW - 10) / 2;
+	SetWindowPos(m_hColsLabel, nullptr, leftX, leftY, halfW, 20, SWP_NOZORDER);
+	SetWindowPos(m_hRowsLabel, nullptr, leftX + halfW + 10, leftY, halfW, 20, SWP_NOZORDER);
+	leftY += 20;
+	SetWindowPos(m_hColsEdit, nullptr, leftX, leftY, halfW, editH, SWP_NOZORDER);
+	SetWindowPos(m_hRowsEdit, nullptr, leftX + halfW + 10, leftY, halfW, editH, SWP_NOZORDER);
 
 	leftY += editH + gapY + 10;
 	SetWindowPos(m_hApplyBtn, nullptr, leftX, leftY, editW, 40, SWP_NOZORDER);
@@ -407,9 +403,9 @@ void UI::LayoutControls(int clientWidth, int clientHeight)
 	leftY += 30 + gapY;
 	SetWindowPos(m_hEraserBtn, nullptr, leftX, leftY, editW, 30, SWP_NOZORDER);
 
-	leftY += 30 + gapY / 2;
+	leftY += 30 + gapY;
 	SetWindowPos(m_hEraserSizeLabel, nullptr, leftX, leftY, labelW, 20, SWP_NOZORDER);
-	leftY += 20;
+	leftY += 24; // 增加间距避免重叠
 	SetWindowPos(m_hEraserSizeCombo, nullptr, leftX, leftY, editW, editH, SWP_NOZORDER);
 }
 

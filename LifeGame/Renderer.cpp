@@ -828,7 +828,7 @@ void Renderer::DrawLeftPanel(HDC hdc, int clientWidth, int clientHeight, const L
 
 		SelectObject(hdc, m_hLeftDescFont);
 		SetTextColor(hdc, m_colText); // 普通文本颜色
-		DrawText(hdc, sc[i].desc, -1, &descR, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_WORDBREAK);
+		DrawText(hdc, sc[i].desc, -1, &descR, DT_RIGHT | DT_VCENTER | DT_SINGLELINE);
 		SelectObject(hdc, hOld);
 	}
 }
