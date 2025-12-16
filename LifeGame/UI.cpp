@@ -67,7 +67,7 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame &game) {
 
     leftY += editH + gapY;
 
-    // 1.5 预览窗口 (新增)
+    // 预览窗口
     m_preview.Initialize(hInstance, hParent, leftX, leftY, editW, 140); // 预览窗口也变大
     // 设置初始预览
     const auto *p = game.GetPatternLibrary().GetPattern(0);
@@ -75,7 +75,7 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame &game) {
 
     leftY += 140 + gapY;
 
-    // 1.6 简介标签 (新增) - 高度60以支持两行显示
+    // 简介标签 - 高度60以支持两行显示
     m_hDescLabel = CreateWindowEx(0, TEXT("STATIC"), p ? p->description.c_str() : TEXT(""),
                                   WS_CHILD | WS_VISIBLE | SS_LEFT,
                                   leftX, leftY, editW, 60, hParent,
@@ -133,7 +133,7 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame &game) {
                                   WS_CHILD | WS_VISIBLE | SS_LEFT,
                                   leftX + halfW + 10, leftY, halfW, 20, hParent,
                                   nullptr, hInstance, nullptr);
-    leftY += 20;
+    leftY += 28;
     m_hColsEdit = CreateWindowEx(0, TEXT("EDIT"), nullptr,
                                  WS_CHILD | WS_VISIBLE | WS_BORDER | ES_NUMBER | ES_AUTOVSCROLL | WS_TABSTOP,
                                  leftX, leftY, halfW, editH, hParent,
@@ -152,7 +152,7 @@ bool UI::Initialize(HINSTANCE hInstance, HWND hParent, LifeGame &game) {
     leftY += 40 + gapY;
 
 
-    // 4. 文件操作 (新增)
+    // 4. 文件操作
     m_hSaveBtn = CreateWindowEx(0, TEXT("BUTTON"), TEXT("保存存档"),
                                 WS_CHILD | WS_VISIBLE | WS_TABSTOP,
                                 leftX, leftY, 105, 30, hParent,
@@ -322,7 +322,7 @@ void UI::LayoutControls(int clientWidth, int clientHeight) {
     int leftY = 20;
     int labelW = 200;
     int editW = 220;
-    int editH = 28; // 增加高度
+    int editH = 28;
     int gapY = 16;
 
     // 1. 笔刷
@@ -358,7 +358,7 @@ void UI::LayoutControls(int clientWidth, int clientHeight) {
     int halfW = (editW - 10) / 2;
     SetWindowPos(m_hColsLabel, nullptr, leftX, leftY, halfW, 20, SWP_NOZORDER);
     SetWindowPos(m_hRowsLabel, nullptr, leftX + halfW + 10, leftY, halfW, 20, SWP_NOZORDER);
-    leftY += 20;
+    leftY += 28;
     SetWindowPos(m_hColsEdit, nullptr, leftX, leftY, halfW, editH, SWP_NOZORDER);
     SetWindowPos(m_hRowsEdit, nullptr, leftX + halfW + 10, leftY, halfW, editH, SWP_NOZORDER);
 
@@ -454,30 +454,6 @@ void UI::HandleCommand(int id, int code, HWND hWnd, LifeGame &game, Renderer *pR
 
         game.ResizeGrid(newCols, newRows);
         if (pRenderer) pRenderer->ClearVisuals(); // 清除视觉残留
-
-        // 调整窗口大小以适应新网格 (这里不再强制调整窗口大小，而是让网格适应窗口)
-        // 因为用户要求适应 2000x2700 屏幕，窗口大小应该保持较大
-        // 仅当窗口太小时才扩大
-        /*
-        int gridWpx = Renderer::CELL_SIZE * game.GetWidth();
-        int gridHpx = Renderer::CELL_SIZE * game.GetHeight();
-        int topControlsH = 44;
-        int desiredClientW = Renderer::LEFT_PANEL_WIDTH + gridWpx + 20;
-        int desiredClientH = gridHpx + Renderer::STATUS_BAR_HEIGHT + topControlsH + 10;
-
-        int minGridWpx = Renderer::CELL_SIZE * 40;
-        int minClientW = Renderer::LEFT_PANEL_WIDTH + minGridWpx + 20;
-        int minGridHpx = Renderer::CELL_SIZE * 40;
-        int minClientH = minGridHpx + Renderer::STATUS_BAR_HEIGHT + topControlsH + 10;
-
-        if (desiredClientW < minClientW) desiredClientW = minClientW;
-        if (desiredClientH < minClientH) desiredClientH = minClientH;
-
-        RECT wr = {0, 0, desiredClientW, desiredClientH};
-        AdjustWindowRect(&wr, WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX, FALSE);
-
-        SetWindowPos(hWnd, nullptr, 0, 0, wr.right - wr.left, wr.bottom - wr.top, SWP_NOMOVE | SWP_NOZORDER);
-        */
 
         // 更新输入框显示 (可能被修正过)
         _stprintf_s(buf, TEXT("%d"), game.GetHeight());
@@ -886,7 +862,6 @@ bool UI::HandleMouseMove(int x, int y, LifeGame &game,
         }
     }
 
-    // 4. 右键拖拽现在用于平移，不再擦除（已在上方处理）
     return false;
 }
 

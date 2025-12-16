@@ -12,7 +12,7 @@ LifeGame::LifeGame(int width, int height)
       m_updateInterval(100), m_currentRuleIndex(0),
       m_stats(width, height) {
     // 限制网格大小范围，防止内存溢出或性能过低
-    // 比赛要求：支持大网格 (最大 2000x2000)
+    // 支持大网格 (最大 2000x2000)
     if (m_gridWidth < 4) m_gridWidth = 4;
     if (m_gridHeight < 4) m_gridHeight = 4;
     if (m_gridWidth > 2000) m_gridWidth = 2000;
@@ -57,8 +57,6 @@ void LifeGame::SetRule(int ruleIndex) {
  * 核心演化算法。
  */
 void LifeGame::UpdateGrid() {
-    // 并行化优化潜力：这里可以使用 OpenMP 或 std::execution::par
-    // 但为了保持代码简单和兼容性，使用单线程循环
     for (int y = 0; y < m_gridHeight; y++) {
         for (int x = 0; x < m_gridWidth; x++) {
             // 1. 计算邻居数量
@@ -133,7 +131,9 @@ void LifeGame::ResetGrid() {
     m_stats.Reset(m_gridWidth, m_gridHeight);
 }
 
-// 反转网格状态
+/**
+ * @brief 反转网格状态
+ */
 void LifeGame::InvertGrid() {
     for (int y = 0; y < m_gridHeight; ++y) {
         for (int x = 0; x < m_gridWidth; ++x) {
@@ -142,7 +142,9 @@ void LifeGame::InvertGrid() {
     }
 }
 
-// 清空指定区域
+/**
+ * @brief 清空指定区域
+ */
 void LifeGame::ClearArea(int x, int y, int w, int h) {
     for (int dy = 0; dy < h; ++dy) {
         for (int dx = 0; dx < w; ++dx) {
@@ -151,7 +153,9 @@ void LifeGame::ClearArea(int x, int y, int w, int h) {
     }
 }
 
-// 随机填充指定区域
+/**
+ * @brief 随机填充指定区域
+ */
 void LifeGame::RandomizeArea(int x, int y, int w, int h, float density) {
     for (int dy = 0; dy < h; ++dy) {
         for (int dx = 0; dx < w; ++dx) {
@@ -175,9 +179,7 @@ void LifeGame::ResizeGrid(int newWidth, int newHeight) {
     std::vector<std::vector<bool> > newGrid(newHeight, std::vector<bool>(newWidth, false));
     std::vector<std::vector<bool> > newNext(newHeight, std::vector<bool>(newWidth, false));
 
-    // 用户要求：调整大小时清空画布，不保留原有内容
-    // 原有的数据迁移逻辑已移除
-
+    // 调整大小时清空画布，不保留原有内容
     m_gridWidth = newWidth;
     m_gridHeight = newHeight;
     m_grid = std::move(newGrid);
@@ -236,8 +238,7 @@ void LifeGame::PlacePattern(int x, int y, int patternIndex) {
 
         for (int dy = 0; dy < pH; ++dy) {
             for (int dx = 0; dx < pW; ++dx) {
-                // 仅当图案中的细胞为活时才设置，或者覆盖？
-                // 通常覆盖比较好
+                // 覆盖图案
                 if (patternGrid[dy][dx]) {
                     SetCell(x + dx, y + dy, true);
                 }

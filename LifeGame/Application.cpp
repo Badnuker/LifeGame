@@ -7,7 +7,6 @@
 #include "Resource.h"
 #include <string>
 #include <sstream>
-#include <tchar.h>
 
 // 构造函数：初始化成员变量
 Application::Application()
@@ -20,11 +19,11 @@ Application::~Application() {
 
 // 应用程序主入口逻辑
 int Application::Run(HINSTANCE hInstance, int nCmdShow, LPSTR lpCmdLine) {
-    // 1. 启用高DPI感知
+    // 启用高DPI感知
     // 防止在高分屏 (High DPI) 显示器下界面模糊，确保像素级清晰度
     SetProcessDPIAware();
 
-    // 0. 显示开机画面 (Splash Screen)
+    // 1. 显示开机画面 (Splash Screen)
     // 在主窗口创建前显示一个无边框的启动窗口，提升用户体验
     {
         SplashWindow splash;
@@ -50,7 +49,7 @@ int Application::Run(HINSTANCE hInstance, int nCmdShow, LPSTR lpCmdLine) {
     wc.hInstance = hInstance;
     wc.lpszClassName = TEXT("LifeGameWindow");
     wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-    wc.hbrBackground = nullptr; // 关键：设置为 nullptr 以禁用系统背景擦除，使用双缓冲防止闪烁
+    wc.hbrBackground = nullptr; // 设置为 nullptr 以禁用系统背景擦除，使用双缓冲防止闪烁
 
     if (!RegisterClass(&wc)) {
         MessageBox(nullptr, TEXT("窗口注册失败！"), TEXT("错误"), MB_ICONERROR);
@@ -72,7 +71,7 @@ int Application::Run(HINSTANCE hInstance, int nCmdShow, LPSTR lpCmdLine) {
         CW_USEDEFAULT, CW_USEDEFAULT,
         windowRect.right - windowRect.left,
         windowRect.bottom - windowRect.top,
-        NULL, NULL, hInstance, this // 关键：将 'this' 指针作为创建参数传递，以便在 StaticWndProc 中获取
+        NULL, NULL, hInstance, this // 将 'this' 指针作为创建参数传递，以便在 StaticWndProc 中获取
     );
 
     if (!hWnd) {
@@ -113,7 +112,7 @@ int Application::Run(HINSTANCE hInstance, int nCmdShow, LPSTR lpCmdLine) {
 
 // 静态窗口过程：消息分发中心
 LRESULT CALLBACK Application::StaticWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    Application *pApp = nullptr;
+    Application * pApp = nullptr;
     if (uMsg == WM_NCCREATE) {
         // 在窗口创建的早期 (WM_NCCREATE)，提取 CreateWindow 传入的 this 指针
         auto pCreate = reinterpret_cast<CREATESTRUCT *>(lParam);
@@ -154,7 +153,7 @@ LRESULT Application::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_RBUTTONUP:
             OnMouse(hWnd, uMsg, wParam, lParam); // 处理鼠标交互
             break;
-        case WM_MOUSELEAVE: // 新增：处理鼠标离开窗口
+        case WM_MOUSELEAVE: // 处理鼠标离开窗口
             if (m_ui && m_renderer) {
                 m_ui->HandleMouseLeave(m_renderer.get());
                 InvalidateRect(hWnd, nullptr, FALSE);
@@ -193,9 +192,7 @@ LRESULT Application::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 InvalidateRect(hWnd, nullptr, TRUE); // 触发重绘
             }
             break;
-        case WM_CLOSE:
-            // 拦截关闭消息，显示关机画面
-            // if (MessageBox(hWnd, TEXT("确定要退出吗？"), TEXT("提示"), MB_YESNO | MB_ICONQUESTION) == IDYES)
+        case WM_CLOSE: // 拦截关闭消息，显示关机画面
         {
             // 隐藏主窗口，避免在关机动画时看到它
             ShowWindow(hWnd, SW_HIDE);
@@ -456,7 +453,11 @@ void Application::OnDestroy(HWND hWnd) {
 // 重启定时器
 void Application::RestartTimer(HWND hWnd) {
     if (m_timerId) KillTimer(hWnd, m_timerId);
-    if (m_game && m_game->IsRunning()) {
+    if (m_game &&m_game
+    ->
+    IsRunning()
+    )
+    {
         // 根据当前游戏速度设置定时器间隔
         m_timerId = SetTimer(hWnd, 1, m_game->GetSpeed(), nullptr);
     }
