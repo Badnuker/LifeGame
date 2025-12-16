@@ -13,13 +13,6 @@ FileManager::~FileManager() {
 // 保存游戏状态到文件
 bool FileManager::SaveGame(const std::wstring &filePath, const LifeGame &game) {
     // 使用宽字符路径打开文件
-    // 注意：std::ofstream 在 Windows 上对宽字符路径的支持取决于编译器版本
-    // MinGW 可能需要特殊处理，这里尝试直接转换或使用 _wfopen
-
-    // 为了兼容性，我们使用 _wfopen_s 和 C 风格 I/O，或者使用 std::ofstream 的扩展
-    // 这里使用 std::ofstream 配合转换后的路径 (如果路径包含中文可能会有问题)
-    // 更好的方法是使用 _wfopen
-
     FILE *fp = nullptr;
     // 使用 _wfopen_s 安全地打开文件，支持中文路径
     _wfopen_s(&fp, filePath.c_str(), L"w");
@@ -43,11 +36,6 @@ bool FileManager::SaveGame(const std::wstring &filePath, const LifeGame &game) {
     fwprintf(fp, L"WIDTH=%d\n", game.GetWidth());
     fwprintf(fp, L"HEIGHT=%d\n", game.GetHeight());
     fwprintf(fp, L"SPEED=%d\n", game.GetSpeed());
-
-    // 写入规则 (这里我们只保存索引，或者保存规则字符串更好)
-    // 暂时保存索引，但这依赖于规则列表不变
-    // 理想情况是保存规则字符串
-    // fwprintf(fp, L"RULE_INDEX=%d\n", game.GetCurrentRuleIndex()); // 需要在 Game 中添加 GetCurrentRuleIndex
 
     fwprintf(fp, L"DATA_START\n");
 
@@ -83,8 +71,6 @@ bool FileManager::LoadGame(const std::wstring &filePath, LifeGame &game) {
 
     // 简单的行读取缓冲区
     wchar_t buffer[4096];
-    // 注意：如果一行超过 4096 字符 (即宽度 > 4096)，这里会出问题
-    // 但我们限制了宽度 2000，所以应该没问题
 
     // 逐行读取文件内容
     while (fgetws(buffer, 4096, fp)) {

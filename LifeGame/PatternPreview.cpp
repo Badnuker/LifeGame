@@ -49,14 +49,6 @@ void PatternPreview::SetPattern(const PatternData *p) {
 
     if (p) {
         // 解析 RLE
-        // 这里我们需要一个临时的 PatternLibrary 实例或者静态方法来解析
-        // 但 ParseRLE 是 PatternLibrary 的成员方法。
-        // 我们可以创建一个临时的 PatternLibrary，或者将 ParseRLE 设为静态。
-        // 为了简单，我们假设 PatternLibrary::ParseRLE 可以被访问，或者我们在这里重新实现简单的解析
-        // 或者更好：Game 拥有 PatternLibrary，UI 拥有 Game。
-        // 但 PatternPreview 只有 PatternData 指针。
-        // 让我们修改 PatternLibrary.h 将 ParseRLE 设为 public static，或者在这里实例化一个。
-
         PatternLibrary lib; // 创建临时实例来调用解析函数
         lib.ParseRLE(p->rleString, m_previewGrid);
     }
@@ -79,7 +71,6 @@ void PatternPreview::Update() {
 // 静态窗口过程
 LRESULT CALLBACK PatternPreview::WndProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp) {
     PatternPreview *pThis = g_pPreview; // 简单单例，不支持多个预览窗口
-    // 正确做法是使用 GWLP_USERDATA，但在 Initialize 中没有设置，这里沿用全局变量
 
     if (msg == WM_PAINT && pThis) {
         pThis->OnPaint(hWnd);
