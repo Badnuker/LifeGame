@@ -56,7 +56,7 @@ void SplashWindow::Show(HINSTANCE hInstance, int mode) {
 
     // 创建全屏无边框窗口
     m_hWnd = CreateWindowEx(
-        WS_EX_TOPMOST | WS_EX_TOOLWINDOW, // 最顶层，不在任务栏显示
+        NULL,
         TEXT("LifeGameSplash"),
         TEXT("Splash"),
         WS_POPUP | WS_VISIBLE,
@@ -101,7 +101,7 @@ void SplashWindow::RunLoop() {
  * 将消息转发给实例的 WndProc。
  */
 LRESULT CALLBACK SplashWindow::StaticWndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    SplashWindow *pThis = nullptr;
+    SplashWindow * pThis = nullptr;
     if (uMsg == WM_NCCREATE) {
         auto pCreate = reinterpret_cast<CREATESTRUCT *>(lParam);
         pThis = reinterpret_cast<SplashWindow *>(pCreate->lpCreateParams);
@@ -123,7 +123,7 @@ LRESULT SplashWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
             OnTimer(hWnd);
             return 0;
         case WM_KEYDOWN:
-            if (wParam == VK_ESCAPE) DestroyWindow(hWnd); // 允许按ESC跳过
+            if (wParam == VK_ESCAPE || wParam == VK_SPACE) DestroyWindow(hWnd); // 允许按ESC和空格跳过
             return 0;
         case WM_DESTROY:
             m_hWnd = nullptr;
@@ -140,7 +140,7 @@ LRESULT SplashWindow::WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam
  */
 void SplashWindow::InitStars(int width, int height) {
     m_stars.clear();
-    int count = 2500; // 大幅增加星星数量 (1000 -> 2500)
+    int count = 2500; // 星星数量
     for (int i = 0; i < count; ++i) {
         Star s;
         // 随机分布在 -width 到 width 之间
